@@ -41,7 +41,7 @@ export function Hero() {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
-          className="max-w-4xl"
+          className="max-w-5xl"
         >
           <span className="text-white/80 uppercase tracking-[0.5em] text-xs font-bold mb-6 block">
             Welcome to Sunbird Hotels &amp; Resorts
@@ -60,7 +60,7 @@ export function Hero() {
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
-          className="w-full max-w-6xl bg-white dark:bg-[#1a1a1a] shadow-2xl p-2 md:p-4 grid grid-cols-1 md:grid-cols-4 gap-2 md:gap-4 items-center"
+          className="w-full max-w-screen-xl bg-white dark:bg-[#1a1a1a] shadow-2xl p-2 md:p-4 grid grid-cols-1 md:grid-cols-4 gap-2 md:gap-4 items-center"
         >
           {/* Destination */}
           <div className="flex flex-col px-4 py-2 border-r border-sunbird-green/10 dark:border-white/10 last:border-0">

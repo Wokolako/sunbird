@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 export function Footer() {
   return (
     <footer className="bg-sunbird-light dark:bg-[#0a0a0a] border-t border-sunbird-green/10 dark:border-white/10 pt-24 pb-12 px-6">
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-screen-2xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-16 mb-20">
           {/* Brand Column */}
           <div className="flex flex-col gap-8">

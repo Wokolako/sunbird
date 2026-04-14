@@ -11,7 +11,7 @@ import { hotels } from '@/lib/data';
 export function FeaturedHotels() {
   return (
     <section id="hotels" className="py-24 px-6 bg-sunbird-light dark:bg-[#0a0a0a]">
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-screen-2xl mx-auto">
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-8">
           <div className="max-w-2xl">
             <span className="text-sunbird-accent uppercase tracking-[0.3em] text-xs font-bold mb-4 block">

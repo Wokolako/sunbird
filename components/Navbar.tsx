@@ -18,6 +18,8 @@ import {
   Sheet,
   SheetContent,
   SheetTrigger,
+  SheetTitle,
+  SheetDescription,
 } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
 
@@ -52,7 +54,7 @@ export function Navbar() {
         isScrolled ? 'bg-white/90 dark:bg-[#0a0a0a]/90 backdrop-blur-md shadow-sm py-3' : 'bg-transparent'
       )}
     >
-      <div className="max-w-7xl mx-auto flex items-center justify-between">
+      <div className="max-w-screen-2xl mx-auto flex items-center justify-between">
         <Link href="/" className="flex flex-col group">
           <span className={cn(
             "text-2xl font-serif font-bold tracking-tighter transition-colors",
@@ -88,45 +90,92 @@ export function Navbar() {
         <div className="flex items-center gap-4">
           <ThemeToggle />
           
-          {mounted && user ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger 
-                render={
-                  <Button variant="ghost" size="icon" className={cn(
-                    "rounded-full p-0 overflow-hidden border border-sunbird-green/10",
+          {mounted ? (
+            <>
+              {user ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger 
+                    render={
+                      <Button variant="ghost" size="icon" className={cn(
+                        "rounded-full p-0 overflow-hidden border border-sunbird-green/10",
+                        isScrolled ? "text-sunbird-green dark:text-white" : "text-white"
+                      )}>
+                        <Image src={user.picture} alt={user.name} width={32} height={32} className="rounded-full" />
+                      </Button>
+                    }
+                  />
+                  <DropdownMenuContent align="end" className="w-56 bg-white dark:bg-[#1a1a1a] border-sunbird-green/10">
+                    <div className="flex items-center gap-2 p-3 border-b border-sunbird-green/10">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium text-sunbird-green dark:text-white">{user.name}</span>
+                        <span className="text-xs text-[#6b6b6b] dark:text-white/60">{user.email}</span>
+                      </div>
+                    </div>
+                    <DropdownMenuItem onClick={logout} className="text-destructive focus:text-destructive cursor-pointer">
+                      <LogOut className="w-4 h-4 mr-2" />
+                      Logout
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={login}
+                  className={cn(
+                    "rounded-full",
                     isScrolled ? "text-sunbird-green dark:text-white" : "text-white"
-                  )}>
-                    <Image src={user.picture} alt={user.name} width={32} height={32} className="rounded-full" />
-                  </Button>
-                }
-              />
-              <DropdownMenuContent align="end" className="w-56 bg-white dark:bg-[#1a1a1a] border-sunbird-green/10">
-                <div className="flex items-center gap-2 p-3 border-b border-sunbird-green/10">
-                  <div className="flex flex-col">
-                    <span className="text-sm font-medium text-sunbird-green dark:text-white">{user.name}</span>
-                    <span className="text-xs text-[#6b6b6b] dark:text-white/60">{user.email}</span>
-                  </div>
-                </div>
-                <DropdownMenuItem onClick={logout} className="text-destructive focus:text-destructive cursor-pointer">
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Logout
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : mounted && !user ? (
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={login}
-              className={cn(
-                "rounded-full",
-                isScrolled ? "text-sunbird-green dark:text-white" : "text-white"
+                  )}
+                >
+                  <User className="w-5 h-5" />
+                </Button>
               )}
-            >
-              <User className="w-5 h-5" />
-            </Button>
+
+              {/* Mobile Menu */}
+              <Sheet>
+                <SheetTrigger 
+                  render={
+                    <Button variant="ghost" size="icon" className={cn(
+                      "md:hidden",
+                      isScrolled ? "text-sunbird-green dark:text-white" : "text-white"
+                    )}>
+                      <Menu className="w-6 h-6" />
+                    </Button>
+                  }
+                />
+                <SheetContent side="right" className="bg-sunbird-light dark:bg-[#0a0a0a] border-l-sunbird-green/10 dark:border-white/10">
+                  <div className="sr-only">
+                    <SheetTitle>Navigation Menu</SheetTitle>
+                    <SheetDescription>Access all pages and booking options.</SheetDescription>
+                  </div>
+                  <div className="flex flex-col gap-8 mt-12">
+                    {navLinks.map((link) => (
+                      <Link
+                        key={link.name}
+                        href={link.href}
+                        className="text-2xl font-serif font-medium text-sunbird-green dark:text-white hover:text-sunbird-accent"
+                      >
+                        {link.name}
+                      </Link>
+                    ))}
+                    <div className="mt-8 pt-8 border-t border-sunbird-green/10 dark:border-white/10 flex flex-col gap-4">
+                      <div className="flex items-center gap-3 text-sunbird-green dark:text-white">
+                        <Phone className="w-4 h-4" />
+                        <span className="text-sm">+265 1 773 388</span>
+                      </div>
+                      <Button className="w-full rounded-none bg-sunbird-green text-white uppercase tracking-widest py-6">
+                        Book Your Stay
+                      </Button>
+                    </div>
+                  </div>
+                </SheetContent>
+              </Sheet>
+            </>
           ) : (
-            <div className="w-10 h-10" /> // Placeholder
+            <div className="flex items-center gap-4">
+              <div className="w-8 h-8 rounded-full bg-white/10" />
+              <div className="w-8 h-8 md:hidden bg-white/10" />
+            </div>
           )}
 
           <Button 
@@ -139,46 +188,6 @@ export function Navbar() {
           >
             Book Now
           </Button>
-
-          {/* Mobile Menu */}
-          {mounted ? (
-            <Sheet>
-              <SheetTrigger 
-                render={
-                  <Button variant="ghost" size="icon" className={cn(
-                    "md:hidden",
-                    isScrolled ? "text-sunbird-green dark:text-white" : "text-white"
-                  )}>
-                    <Menu className="w-6 h-6" />
-                  </Button>
-                }
-              />
-              <SheetContent side="right" className="bg-sunbird-light dark:bg-[#0a0a0a] border-l-sunbird-green/10 dark:border-white/10">
-                <div className="flex flex-col gap-8 mt-12">
-                  {navLinks.map((link) => (
-                    <Link
-                      key={link.name}
-                      href={link.href}
-                      className="text-2xl font-serif font-medium text-sunbird-green dark:text-white hover:text-sunbird-accent"
-                    >
-                      {link.name}
-                    </Link>
-                  ))}
-                  <div className="mt-8 pt-8 border-t border-sunbird-green/10 dark:border-white/10 flex flex-col gap-4">
-                    <div className="flex items-center gap-3 text-sunbird-green dark:text-white">
-                      <Phone className="w-4 h-4" />
-                      <span className="text-sm">+265 1 773 388</span>
-                    </div>
-                    <Button className="w-full rounded-none bg-sunbird-green text-white uppercase tracking-widest py-6">
-                      Book Your Stay
-                    </Button>
-                  </div>
-                </div>
-              </SheetContent>
-            </Sheet>
-          ) : (
-            <div className="w-10 h-10 md:hidden" /> // Placeholder
-          )}
         </div>
       </div>
     </motion.header>

@@ -27,7 +27,7 @@ const features = [
 export function CorporateSection() {
   return (
     <section className="py-24 px-6 bg-sunbird-green dark:bg-[#052d1a] text-white overflow-hidden">
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-screen-2xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
           <motion.div
             initial={{ opacity: 0, x: -50 }}

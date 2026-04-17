@@ -78,8 +78,8 @@ export function CorporateSection() {
             <div className="relative aspect-square max-w-md mx-auto">
               <div className="absolute inset-0 border border-sunbird-accent/30 translate-x-6 translate-y-6" />
               <Image
-                src="https://picsum.photos/seed/corporate/800/800"
-                alt="Corporate Meeting"
+                src="https://images.unsplash.com/photo-1541971875076-8f970d573be6?q=80&w=800&auto=format&fit=crop"
+                alt="Sunbird Hotel Exterior"
                 fill
                 className="object-cover"
                 referrerPolicy="no-referrer"

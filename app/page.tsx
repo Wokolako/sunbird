@@ -19,8 +19,8 @@ export default function Home() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             <div className="relative aspect-video lg:aspect-square">
               <Image 
-                src="https://picsum.photos/seed/dining/1200/1200" 
-                alt="Dining Experience" 
+                src="https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?q=80&w=1200&auto=format&fit=crop" 
+                alt="Malawian Gourmet Fish Dish" 
                 fill
                 className="object-cover"
                 referrerPolicy="no-referrer"

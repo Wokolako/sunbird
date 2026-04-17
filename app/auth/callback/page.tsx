@@ -15,7 +15,7 @@ export default function AuthCallbackPage() {
   return (
     <div className="flex items-center justify-center min-h-screen bg-sunbird-light">
       <div className="text-center">
-        <h1 className="text-2xl font-serif text-sunbird-green mb-4">Authenticating...</h1>
+        <h1 className="text-2xl font-sans font-bold text-sunbird-green mb-4">Authenticating...</h1>
         <p className="text-[#6b6b6b]">Please wait while we complete your sign-in.</p>
       </div>
     </div>

@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Facebook, Instagram, Twitter, Linkedin, Mail, Phone, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,13 +14,16 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-16 mb-20">
           {/* Brand Column */}
           <div className="flex flex-col gap-8">
-            <Link href="/" className="flex flex-col">
-              <span className="text-3xl font-serif font-bold tracking-tighter text-sunbird-green dark:text-white">
-                SUNBIRD
-              </span>
-              <span className="text-[10px] uppercase tracking-[0.3em] font-medium text-sunbird-accent">
-                Hotels &amp; Resorts
-              </span>
+            <Link href="/" className="flex items-center group">
+              <div className="relative h-16 w-auto">
+                <Image 
+                  src="/assets/logo.png"
+                  alt="Sunbird Hotels & Resorts"
+                  width={250}
+                  height={64}
+                  className="h-full w-auto object-contain dark:brightness-0 dark:invert"
+                />
+              </div>
             </Link>
             <p className="text-[#6b6b6b] dark:text-white/60 text-sm font-light leading-relaxed">
               Malawi&apos;s premier hotel chain, offering a unique blend of luxury, comfort, and authentic Malawian hospitality across 9 strategic locations.

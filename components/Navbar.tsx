@@ -4,7 +4,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { motion } from 'motion/react';
 import { Menu, X, Phone, Globe, User, LogOut } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { useAuth } from '@/components/auth-context';
 import Image from 'next/image';
@@ -55,19 +55,17 @@ export function Navbar() {
       )}
     >
       <div className="max-w-screen-2xl mx-auto flex items-center justify-between">
-        <Link href="/" className="flex flex-col group">
-          <span className={cn(
-            "text-2xl font-serif font-bold tracking-tighter transition-colors",
-            isScrolled ? "text-sunbird-green dark:text-white" : "text-white"
-          )}>
-            SUNBIRD
-          </span>
-          <span className={cn(
-            "text-[8px] uppercase tracking-[0.4em] font-medium transition-colors",
-            isScrolled ? "text-sunbird-accent" : "text-white/80"
-          )}>
-            Hotels &amp; Resorts
-          </span>
+        <Link href="/" className="flex items-center group">
+          <div className={cn("relative h-12 w-auto", !isScrolled && "brightness-0 invert")}>
+            <Image 
+              src="/assets/logo.png"
+              alt="Sunbird Hotels & Resorts"
+              width={200}
+              height={48}
+              className="h-full w-auto object-contain"
+              priority
+            />
+          </div>
         </Link>
 
         {/* Desktop Nav */}
@@ -94,14 +92,11 @@ export function Navbar() {
             <>
               {user ? (
                 <DropdownMenu>
-                  <DropdownMenuTrigger 
+                  <DropdownMenuTrigger
                     render={
-                      <Button variant="ghost" size="icon" className={cn(
-                        "rounded-full p-0 overflow-hidden border border-sunbird-green/10",
-                        isScrolled ? "text-sunbird-green dark:text-white" : "text-white"
-                      )}>
+                      <button className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "rounded-full p-0 overflow-hidden border border-sunbird-green/10", isScrolled ? "text-sunbird-green dark:text-white" : "text-white")}>
                         <Image src={user.picture} alt={user.name} width={32} height={32} className="rounded-full" />
-                      </Button>
+                      </button>
                     }
                   />
                   <DropdownMenuContent align="end" className="w-56 bg-white dark:bg-[#1a1a1a] border-sunbird-green/10">
@@ -133,14 +128,17 @@ export function Navbar() {
 
               {/* Mobile Menu */}
               <Sheet>
-                <SheetTrigger 
+                <SheetTrigger
                   render={
-                    <Button variant="ghost" size="icon" className={cn(
-                      "md:hidden",
-                      isScrolled ? "text-sunbird-green dark:text-white" : "text-white"
-                    )}>
+                    <button 
+                      className={cn(
+                        buttonVariants({ variant: "ghost", size: "icon" }),
+                        "md:hidden", 
+                        isScrolled ? "text-sunbird-green dark:text-white" : "text-white"
+                      )}
+                    >
                       <Menu className="w-6 h-6" />
-                    </Button>
+                    </button>
                   }
                 />
                 <SheetContent side="right" className="bg-sunbird-light dark:bg-[#0a0a0a] border-l-sunbird-green/10 dark:border-white/10">
@@ -153,7 +151,7 @@ export function Navbar() {
                       <Link
                         key={link.name}
                         href={link.href}
-                        className="text-2xl font-serif font-medium text-sunbird-green dark:text-white hover:text-sunbird-accent"
+                        className="text-2xl font-sans font-black uppercase tracking-tight text-sunbird-green dark:text-white hover:text-sunbird-accent"
                       >
                         {link.name}
                       </Link>

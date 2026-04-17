@@ -38,9 +38,9 @@ export function CorporateSection() {
             <span className="text-sunbird-accent uppercase tracking-[0.3em] text-xs font-bold mb-6 block">
               Corporate &amp; Business
             </span>
-            <h2 className="text-4xl md:text-5xl font-serif mb-8 leading-tight">
-              Elevating Your <br />
-              <span className="italic">Business</span> Experience
+            <h2 className="text-4xl md:text-5xl font-sans font-black mb-8 leading-[1.1] tracking-tight">
+              ELEVATING YOUR <br />
+              <span className="text-sunbird-accent italic">BUSINESS</span> EXPERIENCE
             </h2>
             <p className="text-white/70 text-lg font-light leading-relaxed mb-10">
               Sunbird Hotels &amp; Resorts is the preferred choice for business travelers in Malawi. 
@@ -54,7 +54,7 @@ export function CorporateSection() {
                     {feature.icon}
                   </div>
                   <div>
-                    <h4 className="text-lg font-serif mb-2">{feature.title}</h4>
+                    <h4 className="text-lg font-sans font-bold mb-2">{feature.title}</h4>
                     <p className="text-white/60 text-sm font-light leading-relaxed">
                       {feature.description}
                     </p>
@@ -92,7 +92,7 @@ export function CorporateSection() {
               transition={{ duration: 4, repeat: Infinity }}
               className="absolute -bottom-10 -left-10 bg-sunbird-accent p-8 hidden md:block"
             >
-              <div className="text-4xl font-serif mb-1">9</div>
+              <div className="text-4xl font-sans font-black mb-1">9</div>
               <div className="text-[10px] uppercase tracking-widest font-bold text-white/80">
                 Strategic Locations <br /> Across Malawi
               </div>

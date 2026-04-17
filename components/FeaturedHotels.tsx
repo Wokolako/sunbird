@@ -17,9 +17,9 @@ export function FeaturedHotels() {
             <span className="text-sunbird-accent uppercase tracking-[0.3em] text-xs font-bold mb-4 block">
               Our Properties
             </span>
-            <h2 className="text-4xl md:text-5xl font-serif text-sunbird-green dark:text-white mb-6">
-              Iconic Destinations, <br />
-              <span className="italic">Unforgettable</span> Stays
+            <h2 className="text-4xl md:text-5xl font-sans font-black text-sunbird-green dark:text-white mb-6 tracking-tight leading-none">
+              ICONIC DESTINATIONS, <br />
+              <span className="text-sunbird-accent italic">UNFORGETTABLE</span> STAYS
             </h2>
             <p className="text-[#6b6b6b] dark:text-white/70 text-lg font-light leading-relaxed">
               From the bustling business hubs of Blantyre and Lilongwe to the serene shores of Lake Malawi, 
@@ -71,7 +71,7 @@ export function FeaturedHotels() {
                 </span>
               </div>
               
-              <h3 className="text-2xl font-serif text-sunbird-green dark:text-white mb-2 group-hover:text-sunbird-accent transition-colors">
+              <h3 className="text-2xl font-sans font-bold text-sunbird-green dark:text-white mb-2 group-hover:text-sunbird-accent transition-colors">
                 {hotel.name}
               </h3>
               

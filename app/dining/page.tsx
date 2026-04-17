@@ -8,7 +8,7 @@ export default function DiningPage() {
       <Navbar />
       <section className="pt-32 pb-24 px-6 bg-sunbird-light dark:bg-[#0a0a0a]">
         <div className="max-w-7xl mx-auto">
-          <h1 className="text-5xl font-serif text-sunbird-green dark:text-white mb-12">Exquisite Dining</h1>
+          <h1 className="text-5xl font-sans font-black text-sunbird-green dark:text-white mb-12 tracking-tight">Exquisite Dining</h1>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
             <div className="relative aspect-video">
               <Image 
@@ -20,7 +20,7 @@ export default function DiningPage() {
               />
             </div>
             <div className="flex flex-col justify-center">
-              <h2 className="text-3xl font-serif text-sunbird-green dark:text-white mb-6">A Culinary Journey</h2>
+              <h2 className="text-3xl font-sans font-bold text-sunbird-green dark:text-white mb-6">A Culinary Journey</h2>
               <p className="text-[#6b6b6b] dark:text-white/70 text-lg font-light leading-relaxed mb-8">
                 Experience the finest Malawian and international cuisine at our award-winning restaurants.
               </p>

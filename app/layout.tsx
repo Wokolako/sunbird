@@ -1,16 +1,11 @@
 import type { Metadata } from 'next';
-import { Inter, Playfair_Display } from 'next/font/google';
+import { Inter } from 'next/font/google';
 import './globals.css';
 import { cn } from "@/lib/utils";
 
 const inter = Inter({
   subsets: ['latin'],
   variable: '--font-sans',
-});
-
-const playfair = Playfair_Display({
-  subsets: ['latin'],
-  variable: '--font-serif',
 });
 
 export const metadata: Metadata = {
@@ -27,7 +22,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={cn("font-sans", inter.variable, playfair.variable)} suppressHydrationWarning>
+    <html lang="en" className={cn("font-sans", inter.variable)} suppressHydrationWarning>
       <body className="antialiased bg-sunbird-light dark:bg-[#0a0a0a] text-sunbird-green dark:text-white" suppressHydrationWarning>
         <AuthProvider>
           <ThemeProvider

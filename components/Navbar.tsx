@@ -56,7 +56,7 @@ export function Navbar() {
     >
       <div className="max-w-screen-2xl mx-auto flex items-center justify-between">
         <Link href="/" className="flex items-center group">
-          <div className="relative h-12 w-auto">
+          <div className={cn("relative h-12 w-auto", !isScrolled && "brightness-0 invert")}>
             <Image 
               src="/assets/logo.png"
               alt="Sunbird Hotels & Resorts"

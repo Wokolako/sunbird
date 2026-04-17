@@ -21,7 +21,7 @@ export function Footer() {
                   alt="Sunbird Hotels & Resorts"
                   width={250}
                   height={64}
-                  className="h-full w-auto object-contain"
+                  className="h-full w-auto object-contain dark:brightness-0 dark:invert"
                 />
               </div>
             </Link>

@@ -1,0 +1,11 @@
+{
+  "passed": true,
+  "isolatedAccounts": true,
+  "roleRestrictedRoutes": true,
+  "ownerIsolation": true,
+  "realListingLifecycle": true,
+  "guestRequests": true,
+  "superAdminControls": true,
+  "mobileOverflow": false,
+  "errors": []
+}

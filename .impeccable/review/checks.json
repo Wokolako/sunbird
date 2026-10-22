@@ -1,0 +1,72 @@
+{
+  "passed": true,
+  "journeys": [
+    "save stays",
+    "location search",
+    "instant filter",
+    "map/list parity",
+    "instant booking preview",
+    "request-to-book preview",
+    "policy cancellation",
+    "manager accept",
+    "calendar close"
+  ],
+  "mobileRoutes": [
+    "/",
+    "/search",
+    "/saved",
+    "/bookings",
+    "/stays/cape-maclear",
+    "/manager",
+    "/admin",
+    "/workspace"
+  ],
+  "errors": [],
+  "overflow": [],
+  "images": [
+    {
+      "src": "http://localhost:3000/assets/photo-1473116763249-2faaef81ccda.jpg",
+      "ok": true
+    },
+    {
+      "src": "http://localhost:3000/assets/photo-1571896349842-33c89424de2d.jpg",
+      "ok": true
+    },
+    {
+      "src": "http://localhost:3000/assets/photo-1449158743715-0a90ebb6d2d8.jpg",
+      "ok": true
+    },
+    {
+      "src": "http://localhost:3000/assets/photo-1445019980597-93fa8acb246c.jpg",
+      "ok": true
+    },
+    {
+      "src": "http://localhost:3000/assets/photo-1566073771259-6a8506099945.jpg",
+      "ok": true
+    },
+    {
+      "src": "http://localhost:3000/assets/photo-1582719478250-c89cae4dc85b.jpg",
+      "ok": true
+    },
+    {
+      "src": "http://localhost:3000/assets/photo-1540541338287-41700207dee6.jpg",
+      "ok": true
+    },
+    {
+      "src": "http://localhost:3000/assets/photo-1473116763249-2faaef81ccda.jpg",
+      "ok": true
+    },
+    {
+      "src": "http://localhost:3000/assets/photo-1566073771259-6a8506099945.jpg",
+      "ok": true
+    },
+    {
+      "src": "http://localhost:3000/assets/photo-1449158743715-0a90ebb6d2d8.jpg",
+      "ok": true
+    },
+    {
+      "src": "http://localhost:3000/assets/photo-1611892440504-42a792e24d32.jpg",
+      "ok": true
+    }
+  ]
+}

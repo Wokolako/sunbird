@@ -1,7 +1,13 @@
 node_modules/
 .next/
+data/
+.npm-cache/
 coverage/
 .DS_Store
 *.log
 .env*
 !.env.example
+.next-management/
+.next-admin/
+.impeccable/*.sqlite*
+.next-test-*/

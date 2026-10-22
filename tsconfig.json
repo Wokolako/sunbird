@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
     "target": "ES2017",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -20,9 +24,35 @@
     ],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"]
+      "@/*": [
+        "./*"
+      ]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
+  "include": [
+    ".next-admin/types/**/*.ts",
+    ".next-management/types/**/*.ts",
+    ".next/types/**/*.ts",
+    "app/**/*.ts",
+    "app/**/*.tsx",
+    "components/AdminApp.tsx",
+    "components/GuestAccount.tsx",
+    "components/GuestBookings.tsx",
+    "components/ManagementShell.tsx",
+    "components/ManagerApp.tsx",
+    "components/Marketplace.tsx",
+    "components/PropertyDetail.tsx",
+    "components/RentalDetail.tsx",
+    "components/SiteShell.tsx",
+    "components/Workspace.tsx",
+    "lib/platform.ts",
+    "lib/portal-actions.ts",
+    "lib/portals.ts",
+    "lib/stays.ts",
+    "middleware.ts",
+    "next-env.d.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
 }

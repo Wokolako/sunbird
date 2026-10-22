@@ -1,6 +1,8 @@
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
+  distDir: process.env.NEXT_BUILD_DIR || (process.env.APP_PORTAL === 'admin' ? '.next-admin' : process.env.APP_PORTAL === 'management' ? '.next-management' : '.next'),
+  outputFileTracingRoot: process.cwd(),
   reactStrictMode: true,
   eslint: {
     ignoreDuringBuilds: true,

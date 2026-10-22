@@ -1,40 +1,12 @@
-import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+﻿import type { Metadata } from 'next';
 import './globals.css';
-import { cn } from "@/lib/utils";
-
-const inter = Inter({
-  subsets: ['latin'],
-  variable: '--font-sans',
-});
 
 export const metadata: Metadata = {
-  title: 'Sunbird Hotels & Resorts | Luxury Hospitality in Malawi',
-  description: 'Experience the warmth of Malawian hospitality with Sunbird Hotels & Resorts. Book your stay at our premier hotels and resorts.',
+  title: 'Vabbot Resorts | Stays across Malawi',
+  description: 'Find verified hotels, lodges, guesthouses and short-term stays across Malawi.',
 };
 
-import { ThemeProvider } from '@/components/theme-provider';
-import { AuthProvider } from '@/components/auth-context';
-
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return (
-    <html lang="en" className={cn("font-sans", inter.variable)} suppressHydrationWarning>
-      <body className="antialiased bg-sunbird-light dark:bg-[#0a0a0a] text-sunbird-green dark:text-white" suppressHydrationWarning>
-        <AuthProvider>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="light"
-            enableSystem
-            disableTransitionOnChange
-          >
-            {children}
-          </ThemeProvider>
-        </AuthProvider>
-      </body>
-    </html>
-  );
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  return <html lang="en"><body>{children}</body></html>;
 }
+

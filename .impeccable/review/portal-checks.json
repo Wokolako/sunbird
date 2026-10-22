@@ -1,0 +1,42 @@
+{
+  "passed": true,
+  "redirects": [
+    [
+      "http://localhost:3000/manager",
+      "http://localhost:3001/"
+    ],
+    [
+      "http://localhost:3000/manage?mode=register",
+      "http://localhost:3001/?mode=register"
+    ],
+    [
+      "http://localhost:3000/admin",
+      "http://localhost:3001/admin"
+    ],
+    [
+      "http://localhost:3000/workspace",
+      "http://localhost:3001/workspace"
+    ],
+    [
+      "http://localhost:3001/manager?mode=register",
+      "http://localhost:3001/?mode=register"
+    ],
+    [
+      "http://localhost:3001/search?location=Lilongwe",
+      "http://localhost:3000/search?location=Lilongwe"
+    ],
+    [
+      "http://localhost:3001/bookings",
+      "http://localhost:3000/bookings"
+    ],
+    [
+      "http://localhost:3001/stays/cape-maclear",
+      "http://localhost:3000/stays/cape-maclear"
+    ]
+  ],
+  "protectedApiChecks": true,
+  "registrationAndSignIn": true,
+  "crossPortalNavigation": true,
+  "mobileOverflow": false,
+  "errors": []
+}

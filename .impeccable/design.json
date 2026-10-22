@@ -1,0 +1,159 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-22T00:00:00Z",
+  "title": "Design System: Vabbot Resorts",
+  "extensions": {
+    "source": "app/globals.css",
+    "typographyMeta": {
+      "display": {
+        "displayName": "Page heading",
+        "purpose": "Base h1; individual pages override this size."
+      },
+      "hero": {
+        "displayName": "Discovery hero",
+        "purpose": "48px at max-width 850px; 39px/1.15 at max-width 620px."
+      },
+      "body": {
+        "displayName": "Interface text",
+        "purpose": "Root size 14px; paragraphs have 1.7 line height with local exceptions."
+      }
+    },
+    "shadows": [
+      {
+        "name": "search",
+        "value": "0 12px 35px #243c3412",
+        "purpose": "Raised search form."
+      },
+      {
+        "name": "guest-popover",
+        "value": "0 12px 36px #243c3424",
+        "purpose": "Party selector overlay."
+      }
+    ],
+    "motion": [
+      {
+        "name": "control",
+        "value": "background .18s, color .18s",
+        "purpose": "Button state transitions."
+      },
+      {
+        "name": "listing-image",
+        "value": "transform .6s cubic-bezier(.2,.8,.2,1)",
+        "purpose": "Listing hover scale 1.035."
+      },
+      {
+        "name": "destination-image",
+        "value": "transform .5s",
+        "purpose": "Destination hover scale 1.04."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "wide",
+        "value": "min-width: 1450px"
+      },
+      {
+        "name": "compact-desktop",
+        "value": "max-width: 1100px"
+      },
+      {
+        "name": "tablet",
+        "value": "max-width: 850px"
+      },
+      {
+        "name": "phone",
+        "value": "max-width: 620px"
+      }
+    ],
+    "layout": {
+      "shellMax": "1280px",
+      "gutters": {
+        "default": "50px",
+        "1100px": "30px",
+        "620px": "18px"
+      },
+      "listingColumns": [
+        3,
+        2,
+        1
+      ],
+      "mapListingColumns": [
+        2,
+        2,
+        1
+      ],
+      "detailStackAt": "850px",
+      "managerToolbarAt": "620px"
+    },
+    "focus": {
+      "color": "#b2834b",
+      "width": "3px",
+      "offset": "4px",
+      "searchField": "2px solid #b1c3ab, offset 4px"
+    },
+    "reducedMotion": "prefers-reduced-motion: reduce disables transitions and animations and sets scroll-behavior: auto."
+  },
+  "components": [
+    {
+      "name": "Primary button",
+      "kind": "button",
+      "description": "Primary button from the active Vabbot interface.",
+      "html": "<button class=\"ds-button\">Explore stays</button>",
+      "css": ".ds-button{background:var(--green,#244f3c);color:white;border:1px solid var(--green,#244f3c);border-radius:6px;padding:12px 20px;min-height:44px;font:600 13px \"Segoe UI\",Arial,sans-serif;transition:background .18s,color .18s}.ds-button:hover{background:var(--green-dark,#173c2b)}.ds-button:disabled{opacity:.5;cursor:not-allowed}:focus-visible{outline:3px solid #b2834b;outline-offset:4px}",
+      "refersTo": "button-primary"
+    },
+    {
+      "name": "Secondary button",
+      "kind": "button",
+      "description": "Secondary button from the active Vabbot interface.",
+      "html": "<button class=\"ds-secondary\">Ask a question</button>",
+      "css": ".ds-secondary{background:transparent;color:var(--green,#244f3c);border:1px solid var(--green,#244f3c);border-radius:6px;padding:12px 20px;min-height:44px;font:600 13px \"Segoe UI\",Arial,sans-serif;transition:background .18s,color .18s}.ds-secondary:hover{background:var(--lime,#e4ebdf)}:focus-visible{outline:3px solid #b2834b;outline-offset:4px}"
+    },
+    {
+      "name": "Booking field",
+      "kind": "input",
+      "description": "Booking field from the active Vabbot interface.",
+      "html": "<label class=\"ds-field\">Full name<input autocomplete=\"name\"></label>",
+      "css": ".ds-field{display:flex;flex-direction:column;gap:8px;font:500 12px \"Segoe UI\",Arial,sans-serif;color:var(--ink,#243c34)}.ds-field input{min-height:42px;min-width:0;background:white;color:var(--ink,#243c34);padding:10px;border:1px solid #cdd5c9;border-radius:5px;font:inherit}:focus-visible{outline:3px solid #b2834b;outline-offset:4px}"
+    },
+    {
+      "name": "Status badge",
+      "kind": "chip",
+      "description": "Status badge from the active Vabbot interface.",
+      "html": "<span class=\"ds-badge\">Frontend preview</span>",
+      "css": ".ds-badge{display:inline-flex;background:#e8eee2;color:#37593e;border-radius:4px;padding:5px 8px;font:600 10px \"Segoe UI\",Arial,sans-serif}:focus-visible{outline:3px solid #b2834b;outline-offset:4px}"
+    },
+    {
+      "name": "Guest navigation",
+      "kind": "nav",
+      "description": "Guest navigation from the active Vabbot interface.",
+      "html": "<nav class=\"ds-nav\"><a href=\"#stays\">Find a stay</a><a href=\"#bookings\">My bookings</a></nav>",
+      "css": ".ds-nav{display:flex;gap:32px;font:13px \"Segoe UI\",Arial,sans-serif;color:var(--ink,#243c34)}.ds-nav a{padding:14px 0;color:inherit;text-decoration:none}.ds-nav a:hover{color:var(--green,#244f3c);text-decoration:underline;text-underline-offset:7px}:focus-visible{outline:3px solid #b2834b;outline-offset:4px}"
+    },
+    {
+      "name": "Operational card",
+      "kind": "card",
+      "description": "Operational card from the active Vabbot interface.",
+      "html": "<article class=\"ds-card\"><h2>Sample property</h2><p>Illustrative operations only.</p></article>",
+      "css": ".ds-card{background:white;border:1px solid var(--line,#e4e7df);padding:25px;border-radius:9px;color:var(--ink,#243c34)}.ds-card h2{font:400 28px/1.15 Georgia,serif;letter-spacing:-.035em;margin:0 0 12px}.ds-card p{font:13px/1.7 \"Segoe UI\",Arial,sans-serif;color:var(--muted,#647169);margin:0}:focus-visible{outline:3px solid #b2834b;outline-offset:4px}"
+    }
+  ],
+  "narrative": {
+    "overview": "Warm ivory and evergreen accommodation discovery with editorial serif headings, landscape photography and generous open space. Operational screens use denser tables and explicit statuses.",
+    "keyCharacteristics": [
+      "Editorial travel discovery",
+      "Responsive guest and property screens",
+      "Explicit sample-data boundaries",
+      "Protected server-backed onboarding and admin verification"
+    ],
+    "dos": [
+      "Label sample properties, prices, reviews and operational data.",
+      "Serve illustrative photographs locally from public/assets with origin sidecars.",
+      "Preserve reduced-motion and visible keyboard-focus behavior."
+    ],
+    "donts": [
+      "Do not present local booking previews as reserved or paid stays.",
+      "Do not import the retired Sunbird component library into active screens."
+    ]
+  }
+}

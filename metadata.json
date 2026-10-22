@@ -1,6 +1,6 @@
-{
-  "name": "Sunbird Hotels & Resorts",
-  "description": "Modern corporate website for Sunbird Hotels and Resorts with integrated booking and payment systems.",
+﻿{
+  "name": "Vabbot Resorts",
+  "description": "Hotel and lodge marketplace frontend with guest booking previews and property management screens.",
   "requestFramePermissions": [],
   "majorCapabilities": []
 }

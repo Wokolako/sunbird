@@ -1,20 +1,552 @@
-﻿'use client';
-import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, Check, CheckCircle2, Clock, MapPin, ShieldCheck, Star, Users, BedDouble, Wifi, Coffee, Car, Waves, Accessibility, MessageCircle, Download } from 'lucide-react';
-import { SiteHeader, SiteFooter } from './SiteShell';
-import { stays, money, nightsBetween, type Stay, type BookingPreview } from '@/lib/stays';
+"use client";
+import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  CheckCircle2,
+  Clock,
+  MapPin,
+  ShieldCheck,
+  Star,
+  Users,
+  BedDouble,
+  Wifi,
+  Coffee,
+  Car,
+  Waves,
+  Accessibility,
+  MessageCircle,
+  Download,
+} from "lucide-react";
+import { SiteHeader, SiteFooter } from "./SiteShell";
+import { stays, money, nightsBetween, type Stay, type BookingPreview } from "@/lib/stays";
 
-export function PropertyDetail({ id }: {id: string}) {
- const stay = stays.find(s=>s.id===id)!;
- const [start,setStart]=useState('2026-11-06'); const [end,setEnd]=useState('2026-11-08'); const [guests,setGuests]=useState(2); const [rooms,setRooms]=useState(1);
- const [rate,setRate]=useState(stay.cancellation ? 'flexible' : 'nonrefundable'); const [room,setRoom]=useState('Garden suite'); const [step,setStep]=useState(0); const [question,setQuestion]=useState(false); const [message,setMessage]=useState(''); const [notice,setNotice]=useState(''); const [seconds,setSeconds]=useState(900); const [booking,setBooking]=useState<BookingPreview|null>(null); const [guestName,setGuestName]=useState(''); const [email,setEmail]=useState(''); const [phone,setPhone]=useState(''); const [method,setMethod]=useState('Card'); const submitting=useRef(false);
- useEffect(()=>{const p=new URLSearchParams(window.location.search);const a=p.get('start');const b=p.get('end');if(a&&b&&Number.isFinite(Date.parse(a))&&Date.parse(b)>Date.parse(a)){setStart(a);setEnd(b);}setGuests(Math.max(1,Number(p.get('guests'))||2));setRooms(Math.max(1,Number(p.get('rooms'))||1));},[]);
- useEffect(()=>{if(step!==2)return;const timer=setInterval(()=>setSeconds(s=>Math.max(0,s-1)),1000);return()=>clearInterval(timer);},[step]);
- const nights=nightsBetween(start,end);const nightly=Math.round(stay.price*(rate==='nonrefundable'?.9:1)*(room==='Family chalet'?1.2:1)); const base=nightly*nights*rooms; const tax=Math.round(base*.16/1.16); const total=base;
- const canContinue=Number.isFinite(Date.parse(start))&&start>=new Date().toLocaleDateString('en-CA')&&Date.parse(end)>Date.parse(start)&&guests<=stay.capacity*rooms&&rooms<=stay.rooms;
- function preview(){if(submitting.current||seconds<=0)return;submitting.current=true;const b:BookingPreview={id:`VB-DEMO-${Date.now().toString(36).toUpperCase()}`,stayId:id,start,end,guests,rooms,total,name:guestName,status:stay.instant?'Preview confirmed':'Awaiting property confirmation',created:new Date().toISOString(),refundable:stay.cancellation&&rate==='flexible',room,rate};try{const existing=JSON.parse(localStorage.getItem('vabbot-bookings')||'[]');localStorage.setItem('vabbot-bookings',JSON.stringify([...existing,b]));setBooking(b);setStep(3);}catch{setNotice('Your browser could not save this preview. Enable local storage and try again.');submitting.current=false;}}
- return <><SiteHeader/><main className="shell detail-page"><Link className="back-link" href="/search"><ArrowLeft size={15}/> Back to stays</Link><div className="detail-heading"><div><span className="muted">{stay.type} · Sample property</span><h1>{stay.name}</h1><p><MapPin size={16}/>{stay.location}, Malawi <span className="rating"><Star size={14} fill="currentColor"/>{stay.rating} ({stay.reviews} sample reviews)</span></p></div><a className="text-link" target="_blank" rel="noreferrer" href={`https://www.openstreetmap.org/?mlat=${stay.lat}&mlon=${stay.lng}#map=12/${stay.lat}/${stay.lng}`}>View location <MapPin size={16}/></a></div><div className="property-gallery">{[stay.image,...stay.images].map((src,i)=><img key={src} src={src} alt={`${stay.name}, illustrative ${i===0?'exterior':'room'} photograph`} loading={i?'lazy':'eager'}/>)}</div><div className="detail-layout"><div><section className="detail-section"><h2>A stay to make your own.</h2><p>{stay.description}</p><div className="amenity-list">{stay.amenities.map(a=>{const Icon=a==='Wi-Fi'?Wifi:a==='Breakfast'?Coffee:a==='Parking'?Car:Waves;return <span key={a}><Icon size={19}/>{a}</span>;})}{stay.accessible&&<span><Accessibility size={19}/>Step-free access</span>}</div></section><section className="detail-section"><h2>A little room to unwind.</h2><div className="room-options">{['Garden suite','Family chalet'].map(r=><button className={room===r?'selected':''} key={r} onClick={()=>setRoom(r)}><BedDouble size={24}/><div><strong>{r}</strong><span>{r==='Garden suite'?'1 king bed · 32 m²':'2 double beds · 48 m²'} · Up to {stay.capacity} guests</span></div>{room===r&&<Check size={18}/>}</button>)}</div></section><section className="detail-section"><h2>Good to know before you go.</h2><div className="policy-grid"><div><Clock size={20}/><h3>Arrive & settle in</h3><p>Check-in from 14:00<br/>Check-out by 10:00</p></div><div><ShieldCheck size={20}/><h3>Your plans, protected</h3><p>{stay.cancellation?'Flexible rate: cancel until 48 hours before arrival for a full refund.':'This stay is non-refundable after booking.'}</p></div></div><p>Quiet hours 22:00–07:00. No smoking indoors. Pets by prior arrangement. Sample policies for this preview.</p></section><section className="detail-section"><h2>Hospitality you can count on.</h2><div className="review-overview"><span className="large-rating">{stay.rating}</span><div><span className="rating">{Array.from({length:5},(_,i)=><Star key={i} size={15} fill="currentColor"/>)}</span><p>{stay.reviews} illustrative guest reviews</p></div></div>{['Cleanliness','Location','Value','Staff','Listing accuracy'].map((label,i)=><div className="review-category" key={label}><span>{label}</span><meter min={0} max={5} value={4.6+i*.08}/><strong>{(4.6+i*.08).toFixed(1)}</strong></div>)}<p className="response-summary"><MessageCircle size={17}/> Usually replies within 1 hour · Responds to 96% of messages<br/>Sample responsiveness figures for design review.</p><button className="button secondary" onClick={()=>setQuestion(!question)} aria-expanded={question}>Ask a question <MessageCircle size={16}/></button>{question&&<form className="enquiry-form" onSubmit={e=>{e.preventDefault();setMessage('Your enquiry has been previewed. Live messaging is not connected, so no message has been sent.');}}><label className="field">Your question<textarea required minLength={5} placeholder="Anything you would like to know before your stay?"/></label><button className="button small">Preview enquiry</button>{message&&<p className="status" role="status">{message}</p>}</form>}</section></div><aside className="booking-panel"><div className="booking-panel-title"><h2>{step===3?'Your booking preview':step===2?'Review your stay':step===1?'A few details': 'Make yourself at home.'}</h2><span className="badge">Frontend preview</span></div><ol className="booking-steps">{['Room','Details','Review','Done'].map((s,i)=><li key={s} className={step>=i?'active':''}>{i+1}. {s}</li>)}</ol>{step===3&&booking?<div className="confirmation"><CheckCircle2 size={42}/><h3>{booking.status}</h3><p>This is a saved booking preview. No payment was collected and no room was reserved.</p><strong>{booking.id}</strong><p>{stay.name}<br/>{start} → {end}<br/>Check-in 14:00 · {stay.location}</p>{!stay.instant&&<p>A live request would await the property’s response for up to 24 hours. Declined or expired requests would release the payment hold.</p>}<Link className="button" href="/bookings">View my booking previews <ArrowRight size={16}/></Link></div>:<>{step===0&&<><div className="form-grid"><label className="field">Check-in<input type="date" min={new Date().toLocaleDateString('en-CA')} value={start} onChange={e=>setStart(e.target.value)}/></label><label className="field">Check-out<input type="date" min={start} value={end} onChange={e=>setEnd(e.target.value)}/></label><label className="field">Guests<input type="number" min={1} max={12} value={guests} onChange={e=>setGuests(Math.max(1,Number(e.target.value)))}/></label><label className="field">Rooms<input type="number" min={1} max={stay.rooms} value={rooms} onChange={e=>setRooms(Math.max(1,Number(e.target.value)))}/></label></div><label className="field rate-select">Rate plan<select value={rate} onChange={e=>setRate(e.target.value)}>{stay.cancellation&&<option value="flexible">Flexible · free cancellation until 48h before</option>}<option value="nonrefundable">Non-refundable · save 10%</option></select></label>{!canContinue&&<p role="alert" className="status error">Choose valid dates and enough rooms for your group. This preview has {stay.rooms} rooms, each for {stay.capacity} guests.</p>}<button className="button full-width" disabled={!canContinue} onClick={()=>setStep(1)}>Continue with {room.toLowerCase()} <ArrowRight size={16}/></button></>}{step===1&&<form onSubmit={e=>{e.preventDefault();setSeconds(900);setStep(2);}}><div className="stack"><label className="field">Full name<input required autoComplete="name" value={guestName} onChange={e=>setGuestName(e.target.value)}/></label><label className="field">Email address<input type="email" required autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)}/></label><label className="field">Phone number<input type="tel" required autoComplete="tel" value={phone} onChange={e=>setPhone(e.target.value)}/></label><label className="field">Special requests (optional)<textarea placeholder="Let us know what would make your stay special."/></label></div><p className="small-copy">No sign-up needed for this preview. Email and phone verification are required before live checkout.</p><button className="button full-width">Review your stay <ArrowRight size={16}/></button></form>}{step===2&&<><div className="hold-timer"><Clock size={16}/> Preview timer: {Math.floor(seconds/60)}:{String(seconds%60).padStart(2,'0')}</div><p>{guestName}<br/>{start} → {end}<br/>{guests} guests · {rooms} room{rooms>1?'s':''}<br/>{room} · {rate==='flexible'&&stay.cancellation?'Flexible':'Non-refundable'}</p><label className="field">Preferred payment method<select value={method} onChange={e=>setMethod(e.target.value)}><option>Card</option><option>Mobile money</option><option>Digital wallet</option><option>Bank transfer</option></select></label><p className="small-copy">Charge currency: MWK. Payment options are for preview only. No financial details are collected.</p>{seconds===0?<p className="status error">Your preview timer expired. Go back to start a new preview.</p>:<button className="button full-width" onClick={preview}>Save booking preview <Check size={17}/></button>}<p className="small-copy">{stay.instant?'An instant booking would confirm after verified payment.':'Request to book: the property has 24 hours to accept. A declined or expired request would be voided or refunded.'}</p></>}{step>0&&<button className="back-link" onClick={()=>{setStep(step-1);setNotice('');}}><ArrowLeft size={14}/> Go back</button>}<div className="price-breakdown"><div><span>Accommodation before included taxes</span><strong>{money(base-tax)}</strong></div><div><span>Included taxes (sample 16%)</span><span>{money(tax)}</span></div><div><span>Service fee</span><span>{money(0)}</span></div><div className="price-total"><strong>Total in MWK</strong><strong>{money(total)}</strong></div></div><p className="small-copy">{rate==='flexible'&&stay.cancellation?'Full refund until 48 hours before arrival.':'Non-refundable after booking.'} All taxes and fees included.</p></>}{notice&&<p role="alert" className="status error">{notice}</p>}</aside></div></main><SiteFooter/></>;
+export function PropertyDetail({ id }: { id: string }) {
+  const stay = stays.find((s) => s.id === id)!;
+  const [start, setStart] = useState("2026-11-06");
+  const [end, setEnd] = useState("2026-11-08");
+  const [guests, setGuests] = useState(2);
+  const [rooms, setRooms] = useState(1);
+  const [rate, setRate] = useState(stay.cancellation ? "flexible" : "nonrefundable");
+  const [room, setRoom] = useState("Garden suite");
+  const [step, setStep] = useState(0);
+  const [question, setQuestion] = useState(false);
+  const [message, setMessage] = useState("");
+  const [notice, setNotice] = useState("");
+  const [seconds, setSeconds] = useState(900);
+  const [booking, setBooking] = useState<BookingPreview | null>(null);
+  const [guestName, setGuestName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [method, setMethod] = useState("Card");
+  const submitting = useRef(false);
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search);
+    const a = p.get("start");
+    const b = p.get("end");
+    if (a && b && Number.isFinite(Date.parse(a)) && Date.parse(b) > Date.parse(a)) {
+      setStart(a);
+      setEnd(b);
+    }
+    setGuests(Math.max(1, Number(p.get("guests")) || 2));
+    setRooms(Math.max(1, Number(p.get("rooms")) || 1));
+  }, []);
+  useEffect(() => {
+    if (step !== 2) return;
+    const timer = setInterval(() => setSeconds((s) => Math.max(0, s - 1)), 1000);
+    return () => clearInterval(timer);
+  }, [step]);
+  const nights = nightsBetween(start, end);
+  const nightly = Math.round(
+    stay.price *
+      (rate === "nonrefundable" ? 0.9 : 1) *
+      (room === "Family chalet" ? 1.2 : 1)
+  );
+  const base = nightly * nights * rooms;
+  const tax = Math.round((base * 0.16) / 1.16);
+  const total = base;
+  const canContinue =
+    Number.isFinite(Date.parse(start)) &&
+    start >= new Date().toLocaleDateString("en-CA") &&
+    Date.parse(end) > Date.parse(start) &&
+    guests <= stay.capacity * rooms &&
+    rooms <= stay.rooms;
+  function preview() {
+    if (submitting.current || seconds <= 0) return;
+    submitting.current = true;
+    const b: BookingPreview = {
+      id: `VB-DEMO-${Date.now().toString(36).toUpperCase()}`,
+      stayId: id,
+      start,
+      end,
+      guests,
+      rooms,
+      total,
+      name: guestName,
+      status: stay.instant ? "Preview confirmed" : "Awaiting property confirmation",
+      created: new Date().toISOString(),
+      refundable: stay.cancellation && rate === "flexible",
+      room,
+      rate,
+    };
+    try {
+      const existing = JSON.parse(localStorage.getItem("vabbot-bookings") || "[]");
+      localStorage.setItem("vabbot-bookings", JSON.stringify([...existing, b]));
+      setBooking(b);
+      setStep(3);
+    } catch {
+      setNotice(
+        "Your browser could not save this preview. Enable local storage and try again."
+      );
+      submitting.current = false;
+    }
+  }
+  return (
+    <>
+      <SiteHeader />
+      <main className="shell detail-page">
+        <Link className="back-link" href="/search">
+          <ArrowLeft size={15} /> Back to stays
+        </Link>
+        <div className="detail-heading">
+          <div>
+            <span className="muted">{stay.type} · Sample property</span>
+            <h1>{stay.name}</h1>
+            <p>
+              <MapPin size={16} />
+              {stay.location}, UK{" "}
+              <span className="rating">
+                <Star size={14} fill="currentColor" />
+                {stay.rating} ({stay.reviews} sample reviews)
+              </span>
+            </p>
+          </div>
+          <a
+            className="text-link"
+            target="_blank"
+            rel="noreferrer"
+            href={`https://www.openstreetmap.org/?mlat=${stay.lat}&mlon=${stay.lng}#map=12/${stay.lat}/${stay.lng}`}
+          >
+            View location <MapPin size={16} />
+          </a>
+        </div>
+        <div className="property-gallery">
+          {[stay.image, ...stay.images].map((src, i) => (
+            <img
+              key={src}
+              src={src}
+              alt={`${stay.name}, illustrative ${i === 0 ? "exterior" : "room"} photograph`}
+              loading={i ? "lazy" : "eager"}
+            />
+          ))}
+        </div>
+        <div className="detail-layout">
+          <div>
+            <section className="detail-section">
+              <h2>A stay to make your own.</h2>
+              <p>{stay.description}</p>
+              <div className="amenity-list">
+                {stay.amenities.map((a) => {
+                  const Icon =
+                    a === "Wi-Fi"
+                      ? Wifi
+                      : a === "Breakfast"
+                        ? Coffee
+                        : a === "Parking"
+                          ? Car
+                          : Waves;
+                  return (
+                    <span key={a}>
+                      <Icon size={19} />
+                      {a}
+                    </span>
+                  );
+                })}
+                {stay.accessible && (
+                  <span>
+                    <Accessibility size={19} />
+                    Step-free access
+                  </span>
+                )}
+              </div>
+            </section>
+            <section className="detail-section">
+              <h2>A little room to unwind.</h2>
+              <div className="room-options">
+                {["Garden suite", "Family chalet"].map((r) => (
+                  <button
+                    className={room === r ? "selected" : ""}
+                    key={r}
+                    onClick={() => setRoom(r)}
+                  >
+                    <BedDouble size={24} />
+                    <div>
+                      <strong>{r}</strong>
+                      <span>
+                        {r === "Garden suite"
+                          ? "1 king bed · 32 m²"
+                          : "2 double beds · 48 m²"}{" "}
+                        · Up to {stay.capacity} guests
+                      </span>
+                    </div>
+                    {room === r && <Check size={18} />}
+                  </button>
+                ))}
+              </div>
+            </section>
+            <section className="detail-section">
+              <h2>Good to know before you go.</h2>
+              <div className="policy-grid">
+                <div>
+                  <Clock size={20} />
+                  <h3>Arrive & settle in</h3>
+                  <p>
+                    Check-in from 14:00
+                    <br />
+                    Check-out by 10:00
+                  </p>
+                </div>
+                <div>
+                  <ShieldCheck size={20} />
+                  <h3>Your plans, protected</h3>
+                  <p>
+                    {stay.cancellation
+                      ? "Flexible rate: cancel until 48 hours before arrival for a full refund."
+                      : "This stay is non-refundable after booking."}
+                  </p>
+                </div>
+              </div>
+              <p>
+                Quiet hours 22:00–07:00. No smoking indoors. Pets by prior arrangement.
+                Sample policies for this preview.
+              </p>
+            </section>
+            <section className="detail-section">
+              <h2>Hospitality you can count on.</h2>
+              <div className="review-overview">
+                <span className="large-rating">{stay.rating}</span>
+                <div>
+                  <span className="rating">
+                    {Array.from({ length: 5 }, (_, i) => (
+                      <Star key={i} size={15} fill="currentColor" />
+                    ))}
+                  </span>
+                  <p>{stay.reviews} illustrative guest reviews</p>
+                </div>
+              </div>
+              {["Cleanliness", "Location", "Value", "Staff", "Listing accuracy"].map(
+                (label, i) => (
+                  <div className="review-category" key={label}>
+                    <span>{label}</span>
+                    <meter min={0} max={5} value={4.6 + i * 0.08} />
+                    <strong>{(4.6 + i * 0.08).toFixed(1)}</strong>
+                  </div>
+                )
+              )}
+              <p className="response-summary">
+                <MessageCircle size={17} /> Usually replies within 1 hour · Responds to
+                96% of messages
+                <br />
+                Sample responsiveness figures for design review.
+              </p>
+              <button
+                className="button secondary"
+                onClick={() => setQuestion(!question)}
+                aria-expanded={question}
+              >
+                Ask a question <MessageCircle size={16} />
+              </button>
+              {question && (
+                <form
+                  className="enquiry-form"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    setMessage(
+                      "Your enquiry has been previewed. Live messaging is not connected, so no message has been sent."
+                    );
+                  }}
+                >
+                  <label className="field">
+                    Your question
+                    <textarea
+                      required
+                      minLength={5}
+                      placeholder="Anything you would like to know before your stay?"
+                    />
+                  </label>
+                  <button className="button small">Preview enquiry</button>
+                  {message && (
+                    <p className="status" role="status">
+                      {message}
+                    </p>
+                  )}
+                </form>
+              )}
+            </section>
+          </div>
+          <aside className="booking-panel">
+            <div className="booking-panel-title">
+              <h2>
+                {step === 3
+                  ? "Your booking preview"
+                  : step === 2
+                    ? "Review your stay"
+                    : step === 1
+                      ? "A few details"
+                      : "Make yourself at home."}
+              </h2>
+              <span className="badge">Frontend preview</span>
+            </div>
+            <ol className="booking-steps">
+              {["Room", "Details", "Review", "Done"].map((s, i) => (
+                <li key={s} className={step >= i ? "active" : ""}>
+                  {i + 1}. {s}
+                </li>
+              ))}
+            </ol>
+            {step === 3 && booking ? (
+              <div className="confirmation">
+                <CheckCircle2 size={42} />
+                <h3>{booking.status}</h3>
+                <p>
+                  This is a saved booking preview. No payment was collected and no room
+                  was reserved.
+                </p>
+                <strong>{booking.id}</strong>
+                <p>
+                  {stay.name}
+                  <br />
+                  {start} → {end}
+                  <br />
+                  Check-in 14:00 · {stay.location}
+                </p>
+                {!stay.instant && (
+                  <p>
+                    A live request would await the property’s response for up to 24 hours.
+                    Declined or expired requests would release the payment hold.
+                  </p>
+                )}
+                <Link className="button" href="/bookings">
+                  View my booking previews <ArrowRight size={16} />
+                </Link>
+              </div>
+            ) : (
+              <>
+                {step === 0 && (
+                  <>
+                    <div className="form-grid">
+                      <label className="field">
+                        Check-in
+                        <input
+                          type="date"
+                          min={new Date().toLocaleDateString("en-CA")}
+                          value={start}
+                          onChange={(e) => setStart(e.target.value)}
+                        />
+                      </label>
+                      <label className="field">
+                        Check-out
+                        <input
+                          type="date"
+                          min={start}
+                          value={end}
+                          onChange={(e) => setEnd(e.target.value)}
+                        />
+                      </label>
+                      <label className="field">
+                        Guests
+                        <input
+                          type="number"
+                          min={1}
+                          max={12}
+                          value={guests}
+                          onChange={(e) => setGuests(Math.max(1, Number(e.target.value)))}
+                        />
+                      </label>
+                      <label className="field">
+                        Rooms
+                        <input
+                          type="number"
+                          min={1}
+                          max={stay.rooms}
+                          value={rooms}
+                          onChange={(e) => setRooms(Math.max(1, Number(e.target.value)))}
+                        />
+                      </label>
+                    </div>
+                    <label className="field rate-select">
+                      Rate plan
+                      <select value={rate} onChange={(e) => setRate(e.target.value)}>
+                        {stay.cancellation && (
+                          <option value="flexible">
+                            Flexible · free cancellation until 48h before
+                          </option>
+                        )}
+                        <option value="nonrefundable">Non-refundable · save 10%</option>
+                      </select>
+                    </label>
+                    {!canContinue && (
+                      <p role="alert" className="status error">
+                        Choose valid dates and enough rooms for your group. This preview
+                        has {stay.rooms} rooms, each for {stay.capacity} guests.
+                      </p>
+                    )}
+                    <button
+                      className="button full-width"
+                      disabled={!canContinue}
+                      onClick={() => setStep(1)}
+                    >
+                      Continue with {room.toLowerCase()} <ArrowRight size={16} />
+                    </button>
+                  </>
+                )}
+                {step === 1 && (
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      setSeconds(900);
+                      setStep(2);
+                    }}
+                  >
+                    <div className="stack">
+                      <label className="field">
+                        Full name
+                        <input
+                          required
+                          autoComplete="name"
+                          value={guestName}
+                          onChange={(e) => setGuestName(e.target.value)}
+                        />
+                      </label>
+                      <label className="field">
+                        Email address
+                        <input
+                          type="email"
+                          required
+                          autoComplete="email"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                        />
+                      </label>
+                      <label className="field">
+                        Phone number
+                        <input
+                          type="tel"
+                          required
+                          autoComplete="tel"
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value)}
+                        />
+                      </label>
+                      <label className="field">
+                        Special requests (optional)
+                        <textarea placeholder="Let us know what would make your stay special." />
+                      </label>
+                    </div>
+                    <p className="small-copy">
+                      No sign-up needed for this preview. Email and phone verification are
+                      required before live checkout.
+                    </p>
+                    <button className="button full-width">
+                      Review your stay <ArrowRight size={16} />
+                    </button>
+                  </form>
+                )}
+                {step === 2 && (
+                  <>
+                    <div className="hold-timer">
+                      <Clock size={16} /> Preview timer: {Math.floor(seconds / 60)}:
+                      {String(seconds % 60).padStart(2, "0")}
+                    </div>
+                    <p>
+                      {guestName}
+                      <br />
+                      {start} → {end}
+                      <br />
+                      {guests} guests · {rooms} room{rooms > 1 ? "s" : ""}
+                      <br />
+                      {room} ·{" "}
+                      {rate === "flexible" && stay.cancellation
+                        ? "Flexible"
+                        : "Non-refundable"}
+                    </p>
+                    <label className="field">
+                      Preferred payment method
+                      <select value={method} onChange={(e) => setMethod(e.target.value)}>
+                        <option>Card</option>
+                        <option>Mobile money</option>
+                        <option>Digital wallet</option>
+                        <option>Bank transfer</option>
+                      </select>
+                    </label>
+                    <p className="small-copy">
+                      Charge currency: GBP. Payment options are for preview only. No
+                      financial details are collected.
+                    </p>
+                    {seconds === 0 ? (
+                      <p className="status error">
+                        Your preview timer expired. Go back to start a new preview.
+                      </p>
+                    ) : (
+                      <button className="button full-width" onClick={preview}>
+                        Save booking preview <Check size={17} />
+                      </button>
+                    )}
+                    <p className="small-copy">
+                      {stay.instant
+                        ? "An instant booking would confirm after verified payment."
+                        : "Request to book: the property has 24 hours to accept. A declined or expired request would be voided or refunded."}
+                    </p>
+                  </>
+                )}
+                {step > 0 && (
+                  <button
+                    className="back-link"
+                    onClick={() => {
+                      setStep(step - 1);
+                      setNotice("");
+                    }}
+                  >
+                    <ArrowLeft size={14} /> Go back
+                  </button>
+                )}
+                <div className="price-breakdown">
+                  <div>
+                    <span>Accommodation before included taxes</span>
+                    <strong>{money(base - tax)}</strong>
+                  </div>
+                  <div>
+                    <span>Included taxes (sample 16%)</span>
+                    <span>{money(tax)}</span>
+                  </div>
+                  <div>
+                    <span>Service fee</span>
+                    <span>{money(0)}</span>
+                  </div>
+                  <div className="price-total">
+                    <strong>Total in GBP</strong>
+                    <strong>{money(total)}</strong>
+                  </div>
+                </div>
+                <p className="small-copy">
+                  {rate === "flexible" && stay.cancellation
+                    ? "Full refund until 48 hours before arrival."
+                    : "Non-refundable after booking."}{" "}
+                  All taxes and fees included.
+                </p>
+              </>
+            )}
+            {notice && (
+              <p role="alert" className="status error">
+                {notice}
+              </p>
+            )}
+          </aside>
+        </div>
+      </main>
+      <SiteFooter />
+    </>
+  );
 }
-
-

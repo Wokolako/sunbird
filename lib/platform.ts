@@ -1,20 +1,25 @@
-import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
-import { mkdirSync } from 'node:fs';
-import path from 'node:path';
-import { cookies } from 'next/headers';
+import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
+import { mkdirSync } from "node:fs";
+import path from "node:path";
+import { cookies } from "next/headers";
 
-const { DatabaseSync } = require('node:sqlite') as { DatabaseSync: new (file: string) => any };
+const { DatabaseSync } = require("node:sqlite") as {
+  DatabaseSync: new (file: string) => any;
+};
 type Db = InstanceType<typeof DatabaseSync>;
 type Row = Record<string, any>;
 
-const storage = (globalThis as typeof globalThis & { finderDb?: Db });
+const storage = globalThis as typeof globalThis & { finderDb?: Db };
 
 export function database(): Db {
   if (storage.finderDb) return storage.finderDb;
-  const file = process.env.DATABASE_PATH || path.join(process.cwd(), 'data', 'finder.sqlite');
+  const file =
+    process.env.DATABASE_PATH || path.join(process.cwd(), "data", "finder.sqlite");
   mkdirSync(path.dirname(file), { recursive: true });
   const db = new DatabaseSync(file);
-  db.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;');
+  db.exec(
+    "PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;"
+  );
   db.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY, name TEXT NOT NULL, email TEXT NOT NULL UNIQUE,
@@ -48,7 +53,7 @@ export function database(): Db {
       house_rules TEXT NOT NULL DEFAULT '', cancellation_policy TEXT NOT NULL DEFAULT '',
       check_in TEXT NOT NULL DEFAULT '14:00', check_out TEXT NOT NULL DEFAULT '10:00',
       booking_mode TEXT NOT NULL DEFAULT 'request' CHECK(booking_mode IN ('instant','request')),
-      currency TEXT NOT NULL DEFAULT 'MWK',
+      currency TEXT NOT NULL DEFAULT 'GBP',
       status TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','published','paused')),
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
@@ -81,9 +86,15 @@ export function database(): Db {
     CREATE INDEX IF NOT EXISTS idx_properties_status ON properties(status);
     CREATE INDEX IF NOT EXISTS idx_availability_night ON availability(night);
   `);
-  db.exec('CREATE TABLE IF NOT EXISTS platform_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)');
+  db.exec(
+    "CREATE TABLE IF NOT EXISTS platform_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)"
+  );
   storage.finderDb = db;
-  if (!(db.prepare('PRAGMA table_info(users)').all() as Row[]).some(column => column.name === 'status')) {
+  if (
+    !(db.prepare("PRAGMA table_info(users)").all() as Row[]).some(
+      (column) => column.name === "status"
+    )
+  ) {
     db.exec("ALTER TABLE users ADD COLUMN status TEXT NOT NULL DEFAULT 'active'");
   }
   db.exec(`CREATE TABLE IF NOT EXISTS booking_requests (
@@ -96,49 +107,103 @@ export function database(): Db {
   return db;
 }
 
-export function uid() { return randomBytes(16).toString('hex'); }
+export function uid() {
+  return randomBytes(16).toString("hex");
+}
 export function hashPassword(password: string) {
-  const salt = randomBytes(16).toString('hex');
-  return `${salt}:${scryptSync(password, salt, 64).toString('hex')}`;
+  const salt = randomBytes(16).toString("hex");
+  return `${salt}:${scryptSync(password, salt, 64).toString("hex")}`;
 }
 export function verifyPassword(password: string, stored: string) {
-  const [salt, expected] = stored.split(':');
+  const [salt, expected] = stored.split(":");
   if (!salt || !expected) return false;
-  const a = Buffer.from(expected, 'hex');
+  const a = Buffer.from(expected, "hex");
   const b = scryptSync(password, salt, a.length);
   return a.length === b.length && timingSafeEqual(a, b);
 }
 export function tokenHash(token: string) {
-  return require('node:crypto').createHash('sha256').update(token).digest('hex') as string;
+  return require("node:crypto")
+    .createHash("sha256")
+    .update(token)
+    .digest("hex") as string;
 }
-export function audit(db: Db, actorId: string, entityType: string, entityId: string, action: string, before: unknown, after: unknown) {
-  db.prepare('INSERT INTO audit_log (id,actor_id,entity_type,entity_id,action,before_json,after_json) VALUES (?,?,?,?,?,?,?)')
-    .run(uid(), actorId, entityType, entityId, action, before == null ? null : JSON.stringify(before), after == null ? null : JSON.stringify(after));
+export function audit(
+  db: Db,
+  actorId: string,
+  entityType: string,
+  entityId: string,
+  action: string,
+  before: unknown,
+  after: unknown
+) {
+  db.prepare(
+    "INSERT INTO audit_log (id,actor_id,entity_type,entity_id,action,before_json,after_json) VALUES (?,?,?,?,?,?,?)"
+  ).run(
+    uid(),
+    actorId,
+    entityType,
+    entityId,
+    action,
+    before == null ? null : JSON.stringify(before),
+    after == null ? null : JSON.stringify(after)
+  );
 }
 export function issueSession(db: Db, userId: string) {
-  const token = randomBytes(32).toString('hex');
+  const token = randomBytes(32).toString("hex");
   const expires = new Date(Date.now() + 7 * 86400000).toISOString();
-  db.prepare('INSERT INTO sessions (token_hash,user_id,expires_at) VALUES (?,?,?)').run(tokenHash(token), userId, expires);
+  db.prepare("INSERT INTO sessions (token_hash,user_id,expires_at) VALUES (?,?,?)").run(
+    tokenHash(token),
+    userId,
+    expires
+  );
   return token;
 }
 export async function currentUser(): Promise<Row | null> {
   const token = (await cookies()).get(sessionCookie())?.value;
   if (!token) return null;
   const db = database();
-  return db.prepare("SELECT users.id,users.name,users.email,users.phone,users.role FROM sessions JOIN users ON users.id=sessions.user_id WHERE sessions.token_hash=? AND sessions.expires_at>? AND users.status='active' AND users.role=?")
-    .get(tokenHash(token), new Date().toISOString(), portalRole()) || null;
+  return (
+    db
+      .prepare(
+        "SELECT users.id,users.name,users.email,users.phone,users.role FROM sessions JOIN users ON users.id=sessions.user_id WHERE sessions.token_hash=? AND sessions.expires_at>? AND users.status='active' AND users.role=?"
+      )
+      .get(tokenHash(token), new Date().toISOString(), portalRole()) || null
+  );
 }
-export function portalRole() { return process.env.APP_PORTAL === 'admin' ? 'admin' : process.env.APP_PORTAL === 'management' ? 'owner' : 'guest'; }
-export function sessionCookie() { return `vabbot_${portalRole()}_session`; }
+export function portalRole() {
+  return process.env.APP_PORTAL === "admin"
+    ? "admin"
+    : process.env.APP_PORTAL === "management"
+      ? "owner"
+      : "guest";
+}
+export function sessionCookie() {
+  return `vabbot_${portalRole()}_session`;
+}
 export function userOrganisation(db: Db, userId: string) {
-  return db.prepare('SELECT * FROM organisations WHERE owner_id=?').get(userId) as Row | undefined;
+  return db.prepare("SELECT * FROM organisations WHERE owner_id=?").get(userId) as
+    Row | undefined;
 }
 export function propertyForOwner(db: Db, propertyId: string, userId: string) {
-  return db.prepare('SELECT p.* FROM properties p JOIN organisations o ON o.id=p.organisation_id WHERE p.id=? AND o.owner_id=?').get(propertyId, userId) as Row | undefined;
+  return db
+    .prepare(
+      "SELECT p.* FROM properties p JOIN organisations o ON o.id=p.organisation_id WHERE p.id=? AND o.owner_id=?"
+    )
+    .get(propertyId, userId) as Row | undefined;
 }
 export function roomForOwner(db: Db, roomId: string, userId: string) {
-  return db.prepare('SELECT r.* FROM rooms r JOIN properties p ON p.id=r.property_id JOIN organisations o ON o.id=p.organisation_id WHERE r.id=? AND o.owner_id=?').get(roomId, userId) as Row | undefined;
+  return db
+    .prepare(
+      "SELECT r.* FROM rooms r JOIN properties p ON p.id=r.property_id JOIN organisations o ON o.id=p.organisation_id WHERE r.id=? AND o.owner_id=?"
+    )
+    .get(roomId, userId) as Row | undefined;
 }
 export function safeUser(user: Row) {
-  return { id: user.id, name: user.name, email: user.email, phone: user.phone, role: user.role };
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    phone: user.phone,
+    role: user.role,
+  };
 }

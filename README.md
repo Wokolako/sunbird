@@ -1,65 +1,182 @@
-﻿# Vabbot Resorts
+# Sunbird — Hotel & Lodge Marketplace with Integrated PMS
 
-Three separate role-specific web portals use one platform data store. There are no navigation links or redirects between portals. Each portal rejects the other roles' pages and API operations and reads its own session cookie.
+A modern, production-ready full-stack application built with **Next.js (App Router)**, **TypeScript**, **PostgreSQL**, **Prisma ORM**, **Tailwind CSS**, **Zod**, and **NextAuth.js**.
 
-## Local development
+The platform unifies **public marketplace discovery** for guests with a **full-featured Property Management System (PMS)** for lodge/hotel operators and an **administrative back-office console** for platform superintendents.
 
-Use Node.js 22.13 or newer. Install with `npm install`, then run these in separate terminals from the project directory:
+---
 
-```sh
-npm run dev:guest
-npm run dev:manage
-npm run dev:admin
+## 🛠️ Tech Stack
+
+- **Framework**: Next.js 15 (App Router with segregated Route Groups)
+- **Language**: TypeScript (strict mode, zero-error typing)
+- **Database**: PostgreSQL (relational schema with enums & foreign constraints)
+- **ORM**: Prisma Client v6
+- **Styling**: Tailwind CSS with custom hospitality tokens (Evergreen `#244f3c`, warm gold accent)
+- **Component Library**: Shared UI component system (`Button`, `Badge`, `Card`, `Input`, `Select`, `Dialog`, `Tabs`, `Table`, `Avatar`)
+- **Authentication**: NextAuth.js (Auth.js) with JWT session tokens and role claims
+- **Validation**: Zod schema validation for environment and auth/property models
+- **Code Quality**: ESLint (`next/core-web-vitals`) and Prettier (`prettier-plugin-tailwindcss`)
+
+---
+
+## 🏛️ Architecture & Three User Roles
+
+The platform enforces strict role separation across **three dedicated route groups**, each possessing its own independent layout, navigation, and visual theme:
+
+```
+app/
+├── (guest)/                   # 1. GUEST PORTAL (Public Marketplace + Account)
+│   ├── layout.tsx             # Marketplace header (search, explore, currency, auth) & footer
+│   ├── page.tsx               # Curated marketplace homepage & featured lodges
+│   └── account/
+│       └── page.tsx           # Guest account: my stays, folios, saved lodges, settings
+│
+├── (dashboard)/               # 2. PROPERTY PORTAL (/dashboard)
+│   ├── layout.tsx             # PMS sidebar (property switcher, staff role badge, actions)
+│   └── dashboard/
+│       ├── page.tsx           # Front desk overview, live occupancy, arrivals & departures
+│       ├── reservations/      # Booking folios list & check-in management
+│       ├── calendar/          # 14-day PMS availability & rate matrix
+│       └── rooms/             # Housekeeping status board (Clean / Dirty / Maintenance)
+│
+├── (admin)/                   # 3. ADMIN BACK-OFFICE (/admin)
+│   ├── layout.tsx             # Command console layout (dark theme, system status indicator)
+│   └── admin/
+│       ├── page.tsx           # Platform analytics (GMV, active lodges, commission)
+│       ├── properties/        # Organization verification & KYC queue
+│       ├── users/             # User accounts & role boundary assignments
+│       └── audit/             # Append-only audit security log
+│
+└── (auth)/                    # AUTHENTICATION & ACCESS CONTROL
+    ├── layout.tsx             # Centered luxury auth layout
+    └── auth/
+        ├── signin/page.tsx    # Sign-in portal with 1-click test credentials
+        └── unauthorized/page.tsx # 403 Forbidden Access Restricted page
 ```
 
-| Portal | Address | Purpose |
-| --- | --- | --- |
-| Guest | http://localhost:3000 | Create a guest account, find hotels/lodges/houses, save stays and manage personal stay requests |
-| Hotel manager | http://localhost:3001 | Register an organisation, post and manage only its own listings, set room prices, manage availability and guest requests |
-| Super admin | http://localhost:3002 | Review managers, see guest accounts and all listings/requests, suspend accounts, pause listings, inspect audit history and control new requests |
+---
 
-On Windows PowerShell, use `npm.cmd` if script execution policy blocks `npm`.
+## 🛡️ Role-Based Route Protection (`middleware.ts`)
 
-## Accounts and access
+Edge-compatible Next.js middleware inspects JWT session tokens on every navigation:
 
-Guest accounts register at `/account` on the guest portal. Manager accounts register at the manager portal's root. An administrator must approve the organisation's submitted verification documents before its manager can publish a complete listing. No public super-admin registration exists.
+| Route Path                         | Allowed Roles                                            | Behavior if Unauthorized                                      |
+| ---------------------------------- | -------------------------------------------------------- | ------------------------------------------------------------- |
+| `/admin/*`                         | `ADMIN`                                                  | Redirects to `/auth/unauthorized?requiredRole=ADMIN`          |
+| `/dashboard/*`                     | `ADMIN`, `OWNER`, `MANAGER`, `FRONT_DESK`, `HOUSEKEEPER` | Redirects to `/auth/unauthorized?requiredRole=Property Staff` |
+| `/account/*`                       | Any authenticated user (`GUEST`, `ADMIN`, etc.)          | Redirects to `/auth/signin?callbackUrl=/account`              |
+| Public (`/`, `/hotels`, `/search`) | All visitors (unauthenticated & authenticated)           | Open access                                                   |
 
-Create the first super-admin account using the existing bootstrap script, with `ADMIN_EMAIL` and `ADMIN_PASSWORD` supplied through your private environment:
+---
 
-```sh
-node scripts/create-admin.mjs
+## 🔐 Seed Script & Demo Test Credentials
+
+A seed script (`prisma/seed.ts`) populates the database with verified organizations, a flagship resort property (_Windermere Lakeside Retreat & Lodge_ in the Lake District), physical rooms, room types, and test accounts for each role.
+
+On the `/auth/signin` page, you can either enter credentials manually or **click the 1-click test account buttons**:
+
+| Role                 | Email                     | Password         | Default Redirect |
+| -------------------- | ------------------------- | ---------------- | ---------------- |
+| **Super Admin**      | `admin@sunbird.com`       | `Admin123456!`   | `/admin`         |
+| **Property Owner**   | `owner@lakehaven.com`     | `Owner123456!`   | `/dashboard`     |
+| **Property Manager** | `manager@lakehaven.com`   | `Manager123456!` | `/dashboard`     |
+| **Front Desk Staff** | `reception@lakehaven.com` | `Staff123456!`   | `/dashboard`     |
+| **Housekeeper**      | `cleaner@lakehaven.com`   | `Staff123456!`   | `/dashboard`     |
+| **Guest Customer**   | `guest@example.com`       | `Guest123456!`   | `/account`       |
+
+---
+
+## 🚀 Getting Started
+
+### 1. Prerequisites
+
+- **Node.js**: v20.x or newer (recommended: Node 22+)
+- **PostgreSQL**: Local or hosted instance (e.g. Supabase, Neon, or local Postgres service)
+
+### 2. Environment Configuration
+
+Copy `.env.example` to `.env` and configure your database connection string and secret:
+
+```bash
+cp .env.example .env
 ```
 
-The password must have at least 12 characters. No default administrator password is included or created by the application.
+Key variables in `.env`:
 
-Guest, manager and super-admin sessions use `vabbot_guest_session`, `vabbot_owner_session` and `vabbot_admin_session`. A cookie from one portal cannot authenticate another role. Suspending an account revokes its sessions; suspended managers' properties stop appearing in search. Managers cannot access other organisations' records. Super-admin account suspension is deliberately excluded from the public control panel to prevent administrative lockout.
-
-## Current functionality
-
-Published guest results come from the property database, not the retired sample catalogue. The manager must supply property details, five photos, a map location, house rules, a cancellation policy and at least one priced room type before publication. Organisation approval is required. Ratings are not invented: listings without real reviews show New.
-
-Guests must sign in to save properties, view personal requests or submit a stay request. Requests are stored on the server and can be accepted or declined by the owning manager. Confirming a request checks every night's available units inside a SQLite write transaction. Check-in and completion actions update manager guest counts. Guest and manager request changes are recorded in the audit log.
-
-Stay requests do not collect online payments. They are pending until accepted. Amounts are room-rate totals; guests must confirm any additional charges with the property. Payment-provider onboarding, paid checkout, automated refunds, notification delivery and full review submission remain future integrations.
-
-The old sample PMS and preview booking components remain as unused reference code. `/workspace` is inaccessible in every portal. Archived dining/conference/offer pages are also inaccessible. The guest website has no posting, management or administration entry points.
-
-## Build and run
-
-```sh
-npm run build
-npm run build:manage
-npm run build:admin
+```env
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/sunbird_db?schema=public"
+NEXTAUTH_SECRET="development-secret-change-me-in-production-at-least-32-chars-long"
+NEXTAUTH_URL="http://localhost:3000"
+NODE_ENV="development"
 ```
 
-Start the built portals in three terminals with `npm start`, `npm run start:manage` and `npm run start:admin`. Generated outputs use `.next`, `.next-management` and `.next-admin` respectively.
+### 3. Install Dependencies
 
-## Vercel
+```bash
+npm install
+```
 
-Create three Vercel projects from this repository, using the directory containing this package.json as the root and `npm run build` as the build command. Set `APP_PORTAL` to `guest`, `management` or `admin` in the corresponding project. No public cross-portal URLs are required. Portal routes remain isolated rather than redirecting across projects.
+### 4. Database Setup & Seeding
 
-Local data is shared via `data/finder.sqlite` (or `DATABASE_PATH`). Shared persistent production storage must replace this local SQLite implementation before using the three Vercel deployments with real customers. Separate deployments alone do not share Vercel filesystem data. No Vercel projects, hosted databases or public domains are provisioned by this source change.
+Generate Prisma Client and push schema to your PostgreSQL database:
 
-## Verification
+```bash
+# Generate the Prisma Client
+npm run db:generate
 
-`scripts/test-isolated-portals.cjs` creates a separate temporary SQLite database and starts all three portals on ports 3100–3102 with isolated build directories. It checks account and route separation, organisation verification, listing publication, owner-only pricing, guest requests and admin controls, then captures desktop and mobile views. It uses Playwright from the adjacent fivemilli workspace; `PLAYWRIGHT_CHROMIUM_EXECUTABLE` can select an existing Chrome executable. Test database files are ignored by Git.
+# Push schema directly to PostgreSQL
+npm run db:push
+
+# (Or generate migrations)
+npm run db:migrate
+
+# Seed demo users, organizations, rooms, and bookings
+npm run db:seed
+```
+
+### 5. Start the Development Server
+
+```bash
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) to view the application:
+
+- **Guest Marketplace**: `http://localhost:3000`
+- **Guest Account**: `http://localhost:3000/account`
+- **Property PMS**: `http://localhost:3000/dashboard`
+- **Super Admin**: `http://localhost:3000/admin`
+- **Sign In Demo**: `http://localhost:3000/auth/signin`
+
+---
+
+## 🧪 Available Scripts
+
+| Command                | Description                                                    |
+| ---------------------- | -------------------------------------------------------------- |
+| `npm run dev`          | Starts Next.js development server at port 3000                 |
+| `npm run build`        | Produces an optimized production build                         |
+| `npm run start`        | Starts Next.js production server                               |
+| `npm run lint`         | Runs ESLint (`next/core-web-vitals`)                           |
+| `npm run format`       | Automatically formats codebase with Prettier & Tailwind plugin |
+| `npm run format:check` | Verifies code formatting compliance                            |
+| `npm run db:generate`  | Generates `@prisma/client` types from `prisma/schema.prisma`   |
+| `npm run db:push`      | Synchronizes Prisma schema with PostgreSQL database            |
+| `npm run db:seed`      | Runs `prisma/seed.ts` via `tsx`                                |
+
+---
+
+## 📦 Shared UI Component Library
+
+Accessible, customizable UI components located in `components/ui/`:
+
+- [`button.tsx`](file:///d:/Users/Drastic/HMS/sunbird/components/ui/button.tsx) — Variants: `default`, `secondary`, `destructive`, `outline`, `ghost`, `link`, `accent`.
+- [`badge.tsx`](file:///d:/Users/Drastic/HMS/sunbird/components/ui/badge.tsx) — Variants: `default`, `secondary`, `destructive`, `success`, `warning`, `info`, `outline`.
+- [`card.tsx`](file:///d:/Users/Drastic/HMS/sunbird/components/ui/card.tsx) — `Card`, `CardHeader`, `CardTitle`, `CardDescription`, `CardContent`, `CardFooter`.
+- [`input.tsx`](file:///d:/Users/Drastic/HMS/sunbird/components/ui/input.tsx) — Text input with error messaging and focus ring styling.
+- [`select.tsx`](file:///d:/Users/Drastic/HMS/sunbird/components/ui/select.tsx) — Native styled select with custom variants.
+- [`dialog.tsx`](file:///d:/Users/Drastic/HMS/sunbird/components/ui/dialog.tsx) — Accessible modal dialog with backdrop and escape key handling.
+- [`tabs.tsx`](file:///d:/Users/Drastic/HMS/sunbird/components/ui/tabs.tsx) — Controlled and uncontrolled tab switcher.
+- [`table.tsx`](file:///d:/Users/Drastic/HMS/sunbird/components/ui/table.tsx) — Styled data table component family.
+- [`avatar.tsx`](file:///d:/Users/Drastic/HMS/sunbird/components/ui/avatar.tsx) — User avatar with image fallback initials.

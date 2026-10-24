@@ -1,7 +1,50 @@
-﻿'use client';
-import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { Menu, X, Waves, Heart, Globe2, UserRound } from 'lucide-react';
-export function Brand() { return <Link href="/" className="brand" aria-label="Vabbot Resorts home"><Waves size={32} strokeWidth={1.5}/><span>vabbot<span className="brand-sub">RESORTS</span></span></Link>; }
-export function SiteHeader(){const [open,setOpen]=useState(false);return <header className="topbar"><div className="shell topbar-inner"><Brand/><nav className={`topnav ${open?'is-open':''}`} aria-label="Guest navigation"><Link href="/search">Find a stay</Link><Link href="/#destinations">Destinations</Link><Link href="/bookings">My stays</Link></nav><div className="nav-actions"><Link className="saved-link" href="/saved" aria-label="Saved stays"><Heart size={19}/></Link><span className="currency"><Globe2 size={15}/> MWK</span><Link className="list-property" href="/account"><UserRound size={15}/> My account</Link><button className="mobile-menu icon-button" aria-label={open?'Close navigation':'Open navigation'} aria-expanded={open} onClick={()=>setOpen(!open)}>{open?<X/>:<Menu/>}</button></div></div></header>;}
-export function SiteFooter(){return <footer className="foot"><div className="shell"><div className="footer-main"><div><Brand/><p>A little closer to somewhere special.<br/>Find a hotel, lodge or house for your next stay.</p></div><div><strong>Explore</strong><Link href="/search">Find accommodation</Link><Link href="/saved">Saved stays</Link><Link href="/bookings">My stays</Link></div><div><strong>Your account</strong><Link href="/account">Sign in or create an account</Link><Link href="/bookings">Stay requests</Link></div></div><div className="foot-inner"><span>© {new Date().getFullYear()} Vabbot Resorts</span><span>Hotels, lodges and houses across Malawi</span></div></div></footer>;}
+"use client";
+import Link from "next/link";
+import { Waves } from "lucide-react";
+import { MarketplaceHeader } from "./MarketplaceHeader";
+export function Brand() {
+  return (
+    <Link href="/" className="brand" aria-label="Vabbot Resorts home">
+      <Waves size={32} strokeWidth={1.5} />
+      <span>
+        vabbot<span className="brand-sub">RESORTS</span>
+      </span>
+    </Link>
+  );
+}
+export function SiteHeader() {
+  return <MarketplaceHeader />;
+}
+export function SiteFooter() {
+  return (
+    <footer className="foot">
+      <div className="shell">
+        <div className="footer-main">
+          <div>
+            <Brand />
+            <p>
+              A little closer to somewhere special.
+              <br />
+              Find a hotel, lodge or house for your next stay.
+            </p>
+          </div>
+          <div>
+            <strong>Explore</strong>
+            <Link href="/search">Find accommodation</Link>
+            <Link href="/saved">Saved stays</Link>
+            <Link href="/bookings">My stays</Link>
+          </div>
+          <div>
+            <strong>Your account</strong>
+            <Link href="/account">Sign in or create an account</Link>
+            <Link href="/bookings">Stay requests</Link>
+          </div>
+        </div>
+        <div className="foot-inner">
+          <span>© {new Date().getFullYear()} Vabbot Resorts</span>
+          <span>Hotels, lodges and houses across the United Kingdom</span>
+        </div>
+      </div>
+    </footer>
+  );
+}

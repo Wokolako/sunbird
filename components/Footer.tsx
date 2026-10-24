@@ -1,56 +1,83 @@
-'use client';
+"use client";
 
-import * as React from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
-import { Facebook, Instagram, Twitter, Linkedin, Mail, Phone, MapPin } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import * as React from "react";
+import Link from "next/link";
+import Image from "next/image";
+import {
+  Facebook,
+  Instagram,
+  Twitter,
+  Linkedin,
+  Mail,
+  Phone,
+  MapPin,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 export function Footer() {
   return (
-    <footer className="bg-sunbird-light dark:bg-[#0a0a0a] border-t border-sunbird-green/10 dark:border-white/10 pt-24 pb-12 px-6">
-      <div className="max-w-screen-2xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-16 mb-20">
+    <footer className="bg-sunbird-light border-sunbird-green/10 border-t px-6 pb-12 pt-24 dark:border-white/10 dark:bg-[#0a0a0a]">
+      <div className="mx-auto max-w-screen-2xl">
+        <div className="mb-20 grid grid-cols-1 gap-16 md:grid-cols-2 lg:grid-cols-4">
           {/* Brand Column */}
           <div className="flex flex-col gap-8">
-            <Link href="/" className="flex items-center group">
-              <div className="relative h-16 w-auto">
-                <Image 
-                  src="/assets/logo.png"
-                  alt="Sunbird Hotels & Resorts"
-                  width={250}
-                  height={64}
-                  className="h-full w-auto object-contain"
-                />
-              </div>
+            <Link href="/" className="group flex items-center">
+              <span className="font-serif text-2xl font-bold tracking-tight text-primary">
+                Vabbot Resorts
+              </span>
             </Link>
-            <p className="text-[#6b6b6b] dark:text-white/60 text-sm font-light leading-relaxed">
-              Malawi&apos;s premier hotel chain, offering a unique blend of luxury, comfort, and authentic Malawian hospitality across 9 strategic locations.
+            <p className="text-sm font-light leading-relaxed text-[#6b6b6b] dark:text-white/60">
+              Premier luxury hospitality group, offering an exquisite portfolio of lakeside retreats,
+              countryside lodges, and luxury boutique hotels across the United Kingdom.
             </p>
             <div className="flex gap-4">
-              <Link href="#" className="w-10 h-10 rounded-full border border-sunbird-green/10 dark:border-white/10 flex items-center justify-center text-sunbird-green dark:text-white hover:bg-sunbird-green hover:text-white transition-all">
-                <Facebook className="w-4 h-4" />
+              <Link
+                href="#"
+                className="border-primary/20 text-primary hover:bg-primary flex h-10 w-10 items-center justify-center rounded-full border transition-all hover:text-white dark:border-white/10 dark:text-white"
+              >
+                <Facebook className="h-4 w-4" />
               </Link>
-              <Link href="#" className="w-10 h-10 rounded-full border border-sunbird-green/10 dark:border-white/10 flex items-center justify-center text-sunbird-green dark:text-white hover:bg-sunbird-green hover:text-white transition-all">
-                <Instagram className="w-4 h-4" />
+              <Link
+                href="#"
+                className="border-primary/20 text-primary hover:bg-primary flex h-10 w-10 items-center justify-center rounded-full border transition-all hover:text-white dark:border-white/10 dark:text-white"
+              >
+                <Instagram className="h-4 w-4" />
               </Link>
-              <Link href="#" className="w-10 h-10 rounded-full border border-sunbird-green/10 dark:border-white/10 flex items-center justify-center text-sunbird-green dark:text-white hover:bg-sunbird-green hover:text-white transition-all">
-                <Twitter className="w-4 h-4" />
+              <Link
+                href="#"
+                className="border-primary/20 text-primary hover:bg-primary flex h-10 w-10 items-center justify-center rounded-full border transition-all hover:text-white dark:border-white/10 dark:text-white"
+              >
+                <Twitter className="h-4 w-4" />
               </Link>
-              <Link href="#" className="w-10 h-10 rounded-full border border-sunbird-green/10 dark:border-white/10 flex items-center justify-center text-sunbird-green dark:text-white hover:bg-sunbird-green hover:text-white transition-all">
-                <Linkedin className="w-4 h-4" />
+              <Link
+                href="#"
+                className="border-primary/20 text-primary hover:bg-primary flex h-10 w-10 items-center justify-center rounded-full border transition-all hover:text-white dark:border-white/10 dark:text-white"
+              >
+                <Linkedin className="h-4 w-4" />
               </Link>
             </div>
           </div>
 
           {/* Quick Links */}
           <div>
-            <h4 className="text-xs uppercase tracking-[0.2em] font-bold text-sunbird-green dark:text-white mb-8">Quick Links</h4>
+            <h4 className="text-primary mb-8 text-xs font-bold uppercase tracking-[0.2em] dark:text-white">
+              Quick Links
+            </h4>
             <ul className="flex flex-col gap-4">
-              {['About Us', 'Our Hotels', 'Conferences', 'Dining', 'Special Offers', 'Careers'].map((item) => (
+              {[
+                "About Vabbot Resorts",
+                "Our Resorts & Lodges",
+                "Private Dining & Events",
+                "Safari Expeditions",
+                "Special Offers",
+                "Property Management (PMS)",
+              ].map((item) => (
                 <li key={item}>
-                  <Link href="#" className="text-sm text-[#6b6b6b] dark:text-white/60 hover:text-sunbird-accent transition-colors font-light">
+                  <Link
+                    href="#"
+                    className="hover:text-accent text-sm font-light text-[#6b6b6b] transition-colors dark:text-white/60"
+                  >
                     {item}
                   </Link>
                 </li>
@@ -60,25 +87,27 @@ export function Footer() {
 
           {/* Contact Info */}
           <div>
-            <h4 className="text-xs uppercase tracking-[0.2em] font-bold text-sunbird-green dark:text-white mb-8">Contact Us</h4>
+            <h4 className="text-primary mb-8 text-xs font-bold uppercase tracking-[0.2em] dark:text-white">
+              Contact & Concierge
+            </h4>
             <ul className="flex flex-col gap-6">
               <li className="flex gap-4">
-                <MapPin className="w-5 h-5 text-sunbird-accent shrink-0" />
-                <span className="text-sm text-[#6b6b6b] dark:text-white/60 font-light leading-relaxed">
-                  28 Glyn Jones Road, <br />
-                  P.O Box 376, Blantyre, Malawi
+                <MapPin className="text-accent h-5 w-5 shrink-0" />
+                <span className="text-sm font-light leading-relaxed text-[#6b6b6b] dark:text-white/60">
+                  Mayfair, London, W1K 6TQ <br />
+                  United Kingdom
                 </span>
               </li>
               <li className="flex gap-4">
-                <Phone className="w-5 h-5 text-sunbird-accent shrink-0" />
-                <span className="text-sm text-[#6b6b6b] dark:text-white/60 font-light">
-                  +265 1 773 388 / 0885 996 521
+                <Phone className="text-accent h-5 w-5 shrink-0" />
+                <span className="text-sm font-light text-[#6b6b6b] dark:text-white/60">
+                  +44 20 7946 0912
                 </span>
               </li>
               <li className="flex gap-4">
-                <Mail className="w-5 h-5 text-sunbird-accent shrink-0" />
-                <span className="text-sm text-[#6b6b6b] dark:text-white/60 font-light">
-                  centralres@sunbirdmalawi.com
+                <Mail className="text-accent h-5 w-5 shrink-0" />
+                <span className="text-sm font-light text-[#6b6b6b] dark:text-white/60">
+                  concierge@vabbotresorts.com
                 </span>
               </li>
             </ul>
@@ -86,30 +115,47 @@ export function Footer() {
 
           {/* Newsletter */}
           <div>
-            <h4 className="text-xs uppercase tracking-[0.2em] font-bold text-sunbird-green dark:text-white mb-8">Newsletter</h4>
-            <p className="text-sm text-[#6b6b6b] dark:text-white/60 font-light mb-6 leading-relaxed">
-              Subscribe to receive exclusive offers and updates from Sunbird.
+            <h4 className="text-primary mb-8 text-xs font-bold uppercase tracking-[0.2em] dark:text-white">
+              Privilege Club
+            </h4>
+            <p className="mb-6 text-sm font-light leading-relaxed text-[#6b6b6b] dark:text-white/60">
+              Subscribe to receive exclusive bespoke invitations, private stay rates, and seasonal safari releases.
             </p>
             <div className="flex flex-col gap-3">
-              <Input 
-                placeholder="Email Address" 
-                className="rounded-none border-sunbird-green/10 dark:border-white/10 focus:border-sunbird-accent focus:ring-0 bg-transparent"
+              <Input
+                placeholder="Email Address"
+                className="border-primary/20 focus:border-accent rounded-none bg-transparent focus:ring-0 dark:border-white/10"
               />
-              <Button className="rounded-none bg-sunbird-green text-white hover:bg-sunbird-accent uppercase tracking-widest text-[10px] font-bold py-6">
+              <Button className="bg-primary hover:bg-primary-800 rounded-none py-6 text-xs font-bold uppercase tracking-widest text-primary-foreground">
                 Subscribe
               </Button>
             </div>
           </div>
         </div>
 
-        <div className="pt-12 border-t border-sunbird-green/10 dark:border-white/10 flex flex-col md:flex-row justify-between items-center gap-6">
-          <p className="text-[10px] uppercase tracking-widest text-sunbird-green/60 dark:text-white/40 font-medium">
-            © {new Date().getFullYear()} Sunbird Tourism PLC. All Rights Reserved.
+        <div className="border-border flex flex-col items-center justify-between gap-6 border-t pt-12 dark:border-white/10 md:flex-row">
+          <p className="text-muted-foreground text-xs font-medium uppercase tracking-widest">
+            © {new Date().getFullYear()} Vabbot Resorts Ltd. All Rights Reserved.
           </p>
           <div className="flex gap-8">
-            <Link href="#" className="text-[10px] uppercase tracking-widest text-sunbird-green/60 dark:text-white/40 hover:text-sunbird-green font-medium">Privacy Policy</Link>
-            <Link href="#" className="text-[10px] uppercase tracking-widest text-sunbird-green/60 dark:text-white/40 hover:text-sunbird-green font-medium">Terms of Service</Link>
-            <Link href="#" className="text-[10px] uppercase tracking-widest text-sunbird-green/60 dark:text-white/40 hover:text-sunbird-green font-medium">Sitemap</Link>
+            <Link
+              href="#"
+              className="text-muted-foreground hover:text-primary text-xs font-medium uppercase tracking-widest"
+            >
+              Privacy Policy
+            </Link>
+            <Link
+              href="#"
+              className="text-muted-foreground hover:text-primary text-xs font-medium uppercase tracking-widest"
+            >
+              Terms of Service
+            </Link>
+            <Link
+              href="#"
+              className="text-muted-foreground hover:text-primary text-xs font-medium uppercase tracking-widest"
+            >
+              Sitemap
+            </Link>
           </div>
         </div>
       </div>

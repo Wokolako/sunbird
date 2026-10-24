@@ -15,30 +15,30 @@ Sun Bird is currently a Next.js marketing site with six hard-coded properties in
 
 ## Decisions to confirm before payment and search architecture
 
-| ID | Decision | Status |
-| --- | --- | --- |
-| D1 | Launch country and first city/region | Malawi, nationwide |
-| D2 | Who holds guest money | Licensed-provider split payments; provider selection open |
-| D3 | Instant booking or request to book | Per-property choice |
-| D4 | Manual inventory, iCal sync, or channel manager | Manual calendar at launch |
-| D5 | Commission, subscription, or listing fee | Commission per booking; percentage open |
+| ID  | Decision                                        | Status                                                    |
+| --- | ----------------------------------------------- | --------------------------------------------------------- |
+| D1  | Launch country and first city/region            | United Kingdom, nationwide                                |
+| D2  | Who holds guest money                           | Licensed-provider split payments; provider selection open |
+| D3  | Instant booking or request to book              | Per-property choice                                       |
+| D4  | Manual inventory, iCal sync, or channel manager | Manual calendar at launch                                 |
+| D5  | Commission, subscription, or listing fee        | Commission per booking; percentage open                   |
 
 Do not choose a payment provider, tax treatment, data region, payout schedule, or commission percentage without confirmation. The user confirmed the product choices above.
 
 ## Traceability
 
-| Requirement group | What to build | Current gap | Acceptance evidence |
-| --- | --- | --- | --- |
-| ROLE-1–ROLE-4 | Server-enforced guest, owner, staff and admin permissions; per-property grants; audit trail; owner/admin 2FA | Mock browser auth only | Unauthorised API tests fail; every sensitive change has before/after audit entry |
-| PM-1–PM-8 | Organisation application, document upload, admin verification, provider KYC, multi-property profiles and publication states | None | New organisation remains hidden until approved; incomplete pin/photo requirements block publication |
-| PM-9–PM-18 | Room types, nightly inventory, date-range bulk edits, rate plans, taxes and fees | Static prices only | Phone calendar change in at most three clicks; concurrent last-unit checkout test allows one hold |
-| PM-19–PM-26 | Unified inbox, request expiry, private messages, booking state actions, notifications, payment confirmation queue and payout statements | None | API booking reaches every permitted state; sandbox webhook drives payment status and statement |
-| PM-27–PM-30, REV-1–REV-7 | Event-derived reviews and response metrics shared between manager and guest views | Hard-coded rating numbers | Dashboard and guest figures equal hand calculations from seeded events |
-| GU-1–GU-11 | Geocoded place/near-me/map search, availability-fit results, radius expansion, list/map, filters, sort and complete cards | Decorative hero search and static cards | Correct available, verified results; list and map use same result set |
-| GU-12–GU-15 | Property gallery, policies, available rooms and rates, reviews, enquiry | No property detail route | Selected dates show valid totals; enquiry starts response clock |
-| GU-16–GU-26 | Four-screen checkout, verified guest contact, visible hold, confirmations, account, cancellation, receipts and eligible reviews | None | Instant and request bookings complete on a phone; cancellation and review rules enforced server-side |
-| PAY-1–PAY-8 | Licensed provider integration, webhook verification, idempotency, holds/refunds, payouts, disputes and reconciliation | None | Browser return cannot mark payment paid; replayed requests do not double-charge |
-| NFR-1–NFR-11 | Mobile, speed, bandwidth, uptime, security, privacy, localisation, accessibility, backups, monitoring and handover | No measured acceptance evidence | 500-property load test; WCAG 2.1 AA audit; restore drill; operational alerts |
+| Requirement group        | What to build                                                                                                                           | Current gap                             | Acceptance evidence                                                                                  |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| ROLE-1–ROLE-4            | Server-enforced guest, owner, staff and admin permissions; per-property grants; audit trail; owner/admin 2FA                            | Mock browser auth only                  | Unauthorised API tests fail; every sensitive change has before/after audit entry                     |
+| PM-1–PM-8                | Organisation application, document upload, admin verification, provider KYC, multi-property profiles and publication states             | None                                    | New organisation remains hidden until approved; incomplete pin/photo requirements block publication  |
+| PM-9–PM-18               | Room types, nightly inventory, date-range bulk edits, rate plans, taxes and fees                                                        | Static prices only                      | Phone calendar change in at most three clicks; concurrent last-unit checkout test allows one hold    |
+| PM-19–PM-26              | Unified inbox, request expiry, private messages, booking state actions, notifications, payment confirmation queue and payout statements | None                                    | API booking reaches every permitted state; sandbox webhook drives payment status and statement       |
+| PM-27–PM-30, REV-1–REV-7 | Event-derived reviews and response metrics shared between manager and guest views                                                       | Hard-coded rating numbers               | Dashboard and guest figures equal hand calculations from seeded events                               |
+| GU-1–GU-11               | Geocoded place/near-me/map search, availability-fit results, radius expansion, list/map, filters, sort and complete cards               | Decorative hero search and static cards | Correct available, verified results; list and map use same result set                                |
+| GU-12–GU-15              | Property gallery, policies, available rooms and rates, reviews, enquiry                                                                 | No property detail route                | Selected dates show valid totals; enquiry starts response clock                                      |
+| GU-16–GU-26              | Four-screen checkout, verified guest contact, visible hold, confirmations, account, cancellation, receipts and eligible reviews         | None                                    | Instant and request bookings complete on a phone; cancellation and review rules enforced server-side |
+| PAY-1–PAY-8              | Licensed provider integration, webhook verification, idempotency, holds/refunds, payouts, disputes and reconciliation                   | None                                    | Browser return cannot mark payment paid; replayed requests do not double-charge                      |
+| NFR-1–NFR-11             | Mobile, speed, bandwidth, uptime, security, privacy, localisation, accessibility, backups, monitoring and handover                      | No measured acceptance evidence         | 500-property load test; WCAG 2.1 AA audit; restore drill; operational alerts                         |
 
 ## Implementation sequence
 
@@ -62,14 +62,14 @@ Do not choose a payment provider, tax treatment, data region, payout schedule, o
 
 Both supplied documents were applied: the Marketplace & PMS project scope, and the numbered Hotel & Lodge Finder specification. Where the two differ, the detailed numbered specification remains the guide for future production behavior. This delivery implements frontend screens and explicitly labelled sample interactions; it does not establish backend acceptance.
 
-| Surface | Delivered frontend | Production dependency |
-| --- | --- | --- |
-| Discovery (GU-1–11) | Destination autocomplete; date inputs; adults, children, ages and rooms; device-location permission; price/type/rating/amenity/cancellation/instant/accessibility filters; sorting; sample list/map parity | Geocoding, live map SDK, availability search, geospatial radius expansion |
-| Property (GU-12–15) | Gallery, room choices, capacity, rate plans, amenities, rules, cancellation policy, review categories, responsiveness and enquiry preview | Verified catalogue, actual reviews and live message delivery |
-| Booking (GU-16–20) | Four steps, guest details validation, sample rate and tax breakdown, 15-minute preview timer, instant/request confirmation previews | OTP, transactional inventory hold, licensed payments, verified webhooks and notifications |
-| Guest account (GU-21–26) | Local upcoming/past/cancelled previews, policy cancellation preview, text receipt download, saved stays, local data deletion | Authenticated account, server cancellation/refund enforcement, PDF invoices, completed-stay review eligibility |
-| Manager operations (PM-9–30 and scope B) | Sample occupancy, arrivals/departures, room status board, date cells, bulk date closure, accept/decline and check-in/out, inbox reply preview, payment confirmation queue, sample CSV, rate settings and review reply preview | Shared reservations/room units, durable rates, staff roles, actual payouts and computed review metrics |
-| Organisation & Admin (PM-1–8) | Existing live registration, verification documents, property/room configuration, availability and protected admin verification retained and rebranded | Provider KYC, production storage and final publication checks |
+| Surface                                  | Delivered frontend                                                                                                                                                                                                            | Production dependency                                                                                          |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Discovery (GU-1–11)                      | Destination autocomplete; date inputs; adults, children, ages and rooms; device-location permission; price/type/rating/amenity/cancellation/instant/accessibility filters; sorting; sample list/map parity                    | Geocoding, live map SDK, availability search, geospatial radius expansion                                      |
+| Property (GU-12–15)                      | Gallery, room choices, capacity, rate plans, amenities, rules, cancellation policy, review categories, responsiveness and enquiry preview                                                                                     | Verified catalogue, actual reviews and live message delivery                                                   |
+| Booking (GU-16–20)                       | Four steps, guest details validation, sample rate and tax breakdown, 15-minute preview timer, instant/request confirmation previews                                                                                           | OTP, transactional inventory hold, licensed payments, verified webhooks and notifications                      |
+| Guest account (GU-21–26)                 | Local upcoming/past/cancelled previews, policy cancellation preview, text receipt download, saved stays, local data deletion                                                                                                  | Authenticated account, server cancellation/refund enforcement, PDF invoices, completed-stay review eligibility |
+| Manager operations (PM-9–30 and scope B) | Sample occupancy, arrivals/departures, room status board, date cells, bulk date closure, accept/decline and check-in/out, inbox reply preview, payment confirmation queue, sample CSV, rate settings and review reply preview | Shared reservations/room units, durable rates, staff roles, actual payouts and computed review metrics         |
+| Organisation & Admin (PM-1–8)            | Existing live registration, verification documents, property/room configuration, availability and protected admin verification retained and rebranded                                                                         | Provider KYC, production storage and final publication checks                                                  |
 
 The frontend catalogue is isolated in `lib/stays.ts`. It contains synthetic properties with illustrative stock photography. It is not automatically published into the existing property database. The sample manager workspace at `/workspace` is separate from protected live onboarding at `/manager`.
 

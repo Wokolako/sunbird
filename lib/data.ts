@@ -6,68 +6,80 @@ export interface Hotel {
   image: string;
   price: number;
   rating: number;
-  type: 'city' | 'resort';
+  type: "city" | "resort";
 }
 
 export const hotels: Hotel[] = [
   {
-    id: '1',
-    name: 'Sunbird Mount Soche',
-    location: 'Blantyre, Malawi',
-    description: 'A premier business hotel located in the heart of Blantyre, offering panoramic views of the city.',
-    image: 'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?q=80&w=800&auto=format&fit=crop',
-    price: 180,
+    id: "1",
+    name: "Vabbot Kensington",
+    location: "London, United Kingdom",
+    description:
+      "A premier boutique hotel located in the heart of Kensington, offering panoramic views of Hyde Park.",
+    image:
+      "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?q=80&w=800&auto=format&fit=crop",
+    price: 280,
     rating: 4.5,
-    type: 'city',
+    type: "city",
   },
   {
-    id: '2',
-    name: 'Sunbird Capital',
-    location: 'Lilongwe, Malawi',
-    description: 'The leading hotel in the capital city, set in lush gardens and close to government offices.',
-    image: 'https://images.unsplash.com/photo-1590490360182-c33d57733427?q=80&w=800&auto=format&fit=crop',
-    price: 210,
+    id: "2",
+    name: "Vabbot Westminster",
+    location: "London, United Kingdom",
+    description:
+      "The leading hotel in the heart of Westminster, set in elegant gardens and close to Buckingham Palace.",
+    image:
+      "https://images.unsplash.com/photo-1590490360182-c33d57733427?q=80&w=800&auto=format&fit=crop",
+    price: 310,
     rating: 4.7,
-    type: 'city',
+    type: "city",
   },
   {
-    id: '3',
-    name: 'Sunbird Nkopola',
-    location: 'Mangochi, Malawi',
-    description: 'A beautiful lakeside resort on the shores of Lake Malawi, perfect for family vacations and water sports.',
-    image: 'https://images.unsplash.com/photo-1566665797739-1674de7a421a?q=80&w=800&auto=format&fit=crop',
-    price: 150,
+    id: "3",
+    name: "Vabbot Windermere",
+    location: "Lake District, United Kingdom",
+    description:
+      "A beautiful lakeside resort on the shores of Lake Windermere, perfect for family holidays and countryside walks.",
+    image:
+      "https://images.unsplash.com/photo-1566665797739-1674de7a421a?q=80&w=800&auto=format&fit=crop",
+    price: 220,
     rating: 4.8,
-    type: 'resort',
+    type: "resort",
   },
   {
-    id: '4',
-    name: 'Sunbird Livingstonia',
-    location: 'Salima, Malawi',
-    description: 'Experience the magic of the lake at this iconic resort, known for its pristine beaches and colonial charm.',
-    image: 'https://images.unsplash.com/photo-1540518614846-7eded433c457?q=80&w=800&auto=format&fit=crop',
-    price: 165,
+    id: "4",
+    name: "Vabbot Cotswolds",
+    location: "Cotswolds, United Kingdom",
+    description:
+      "Experience the magic of the English countryside at this iconic resort, known for its rolling hills and honey-stone charm.",
+    image:
+      "https://images.unsplash.com/photo-1540518614846-7eded433c457?q=80&w=800&auto=format&fit=crop",
+    price: 265,
     rating: 4.6,
-    type: 'resort',
+    type: "resort",
   },
   {
-    id: '5',
-    name: 'Sunbird Mzuzu',
-    location: 'Mzuzu, Malawi',
-    description: 'The gateway to the north, offering comfortable accommodations and excellent dining in Mzuzu.',
-    image: 'https://images.unsplash.com/photo-1566195992011-5f6b21e539aa?q=80&w=800&auto=format&fit=crop',
-    price: 130,
+    id: "5",
+    name: "Vabbot Edinburgh",
+    location: "Edinburgh, United Kingdom",
+    description:
+      "The gateway to Scotland, offering luxurious accommodations and fine dining in Edinburgh's historic Old Town.",
+    image:
+      "https://images.unsplash.com/photo-1566195992011-5f6b21e539aa?q=80&w=800&auto=format&fit=crop",
+    price: 230,
     rating: 4.2,
-    type: 'city',
+    type: "city",
   },
   {
-    id: '6',
-    name: 'Sunbird Ku Chawe',
-    location: 'Zomba, Malawi',
-    description: 'Perched on the edge of the Zomba Plateau, offering breathtaking views and cool mountain air.',
-    image: 'https://images.unsplash.com/photo-1590490359683-658d3d23f972?q=80&w=800&auto=format&fit=crop',
-    price: 190,
+    id: "6",
+    name: "Vabbot Highlands Lodge",
+    location: "Scottish Highlands, United Kingdom",
+    description:
+      "Perched on the edge of the Scottish Highlands, offering breathtaking mountain views and cool highland air.",
+    image:
+      "https://images.unsplash.com/photo-1590490359683-658d3d23f972?q=80&w=800&auto=format&fit=crop",
+    price: 290,
     rating: 4.9,
-    type: 'resort',
+    type: "resort",
   },
 ];

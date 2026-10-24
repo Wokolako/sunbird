@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "ES2017",
+    "target": "ES2020",
     "lib": [
       "dom",
       "dom.iterable",
@@ -30,27 +30,12 @@
     }
   },
   "include": [
-    ".next-admin/types/**/*.ts",
-    ".next-management/types/**/*.ts",
+    "**/*.ts",
+    "**/*.tsx",
     ".next/types/**/*.ts",
-    "app/**/*.ts",
-    "app/**/*.tsx",
-    "components/AdminApp.tsx",
-    "components/GuestAccount.tsx",
-    "components/GuestBookings.tsx",
-    "components/ManagementShell.tsx",
-    "components/ManagerApp.tsx",
-    "components/Marketplace.tsx",
-    "components/PropertyDetail.tsx",
-    "components/RentalDetail.tsx",
-    "components/SiteShell.tsx",
-    "components/Workspace.tsx",
-    "lib/platform.ts",
-    "lib/portal-actions.ts",
-    "lib/portals.ts",
-    "lib/stays.ts",
-    "middleware.ts",
-    "next-env.d.ts"
+    "next-env.d.ts",
+    "types/**/*.d.ts",
+    ".next-marketplace-check/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"

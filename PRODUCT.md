@@ -1,4 +1,4 @@
-﻿# Product
+# Product
 
 <!-- impeccable:product-schema 1 -->
 
@@ -8,8 +8,8 @@ web
 
 ## Users
 
-- Accommodation organisation owners and property staff in Malawi, managing hotels, lodges, guesthouses and registered short-term lets.
-- Local and international travellers searching for and booking rooms in Malawi.
+- Accommodation organisation owners and property staff in the United Kingdom, managing hotels, lodges, guesthouses and registered short-term lets.
+- Local and international travellers searching for and booking rooms in the United Kingdom.
 - Platform administrators verifying organisations and resolving operational issues.
 
 ## Product Purpose
@@ -18,7 +18,7 @@ Vabbot Resorts is a two-sided accommodation marketplace. Verified properties pub
 
 ## Operating Context
 
-The launch market is Malawi nationwide. Property staff need to change availability from a phone. Guests need a responsive web experience. Native apps are outside this phase.
+The launch market is the United Kingdom nationwide. Property staff need to change availability from a phone. Guests need a responsive web experience. Native apps are outside this phase.
 
 ## Capabilities and Constraints
 
@@ -51,5 +51,3 @@ Replace the existing Sun Bird identity with Vabbot Resorts. The existing Sunbird
 ## Accessibility & Inclusion
 
 The guest interface must meet WCAG 2.1 AA and work on low-bandwidth mobile connections. Currency, date and distance formatting must follow locale.
-
-

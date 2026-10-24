@@ -1,18 +1,33 @@
-﻿import { NextRequest, NextResponse } from 'next/server';
-export function middleware(request: NextRequest) {
-  const portal = process.env.APP_PORTAL || 'guest';
-  const path = request.nextUrl.pathname;
-  const allowed = portal === 'admin' ? ['/', '/admin', '/api/platform']
-    : portal === 'management' ? ['/', '/manager', '/api/platform']
-    : ['/', '/search', '/saved', '/bookings', '/account', '/hotels', '/resorts', '/api/platform'];
-  if (!allowed.includes(path) && !(portal === 'guest' && path.startsWith('/stays/'))) {
-    return new NextResponse('This page is not available in this portal.', { status: 404 });
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { getToken } from "next-auth/jwt";
+import { evaluateRouteAccess } from "@/lib/auth-guard";
+
+export async function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+
+  // Extract JWT token session
+  const token = await getToken({
+    req,
+    secret:
+      process.env.NEXTAUTH_SECRET ||
+      "development-secret-change-me-in-production-at-least-32-chars-long",
+  });
+
+  const isAuthenticated = !!token;
+  const userRole = (token?.role as string) || null;
+
+  // Evaluate route permissions using shared auth-guard logic
+  const evaluation = evaluateRouteAccess(pathname, isAuthenticated, userRole);
+
+  if (!evaluation.allowed && evaluation.redirectUrl) {
+    const redirectUrl = new URL(evaluation.redirectUrl, req.url);
+    return NextResponse.redirect(redirectUrl);
   }
-  if (path === '/' && portal !== 'guest') {
-    const url = request.nextUrl.clone();
-    url.pathname = portal === 'admin' ? '/admin' : '/manager';
-    return NextResponse.rewrite(url);
-  }
+
   return NextResponse.next();
 }
-export const config = { matcher: ['/((?!_next(?:/|$)|assets(?:/|$)|favicon.ico|robots.txt|sitemap.xml).*)'] };
+
+export const config = {
+  matcher: ["/admin/:path*", "/dashboard/:path*", "/account/:path*"],
+};

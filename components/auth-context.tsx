@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect } from "react";
 
 interface User {
   name: string;
@@ -23,7 +23,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const initAuth = () => {
-      const savedUser = localStorage.getItem('sunbird_user');
+      const savedUser = localStorage.getItem("sunbird_user");
       if (savedUser) {
         setUser(JSON.parse(savedUser));
       }
@@ -33,36 +33,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     initAuth();
 
     const handleMessage = (event: MessageEvent) => {
-      if (event.data?.type === 'OAUTH_AUTH_SUCCESS') {
+      if (event.data?.type === "OAUTH_AUTH_SUCCESS") {
         // In a real app, we would fetch the user from the session/cookie
         // For this demo, we'll simulate it
         const mockUser = {
-          name: 'Sunbird Guest',
-          email: 'guest@sunbirdmalawi.com',
-          picture: 'https://picsum.photos/seed/user/100/100',
+          name: "Sunbird Guest",
+          email: "guest@sunbird.com",
+          picture: "https://picsum.photos/seed/user/100/100",
         };
         setUser(mockUser);
-        localStorage.setItem('sunbird_user', JSON.stringify(mockUser));
+        localStorage.setItem("sunbird_user", JSON.stringify(mockUser));
       }
     };
 
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
   }, []);
 
   const login = async () => {
     try {
-      const response = await fetch('/api/auth/google/url');
+      const response = await fetch("/api/auth/google/url");
       const { url } = await response.json();
-      window.open(url, 'google_auth', 'width=600,height=700');
+      window.open(url, "google_auth", "width=600,height=700");
     } catch (error) {
-      console.error('Login error:', error);
+      console.error("Login error:", error);
     }
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('sunbird_user');
+    localStorage.removeItem("sunbird_user");
   };
 
   return (
@@ -75,7 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 }

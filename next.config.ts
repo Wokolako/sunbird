@@ -1,7 +1,13 @@
-import type {NextConfig} from 'next';
+import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  distDir: process.env.NEXT_BUILD_DIR || (process.env.APP_PORTAL === 'admin' ? '.next-admin' : process.env.APP_PORTAL === 'management' ? '.next-management' : '.next'),
+  distDir:
+    process.env.NEXT_BUILD_DIR ||
+    (process.env.APP_PORTAL === "admin"
+      ? ".next-admin"
+      : process.env.APP_PORTAL === "management"
+        ? ".next-management"
+        : ".next"),
   outputFileTracingRoot: process.cwd(),
   reactStrictMode: true,
   eslint: {
@@ -14,31 +20,31 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       {
-        protocol: 'https',
-        hostname: 'picsum.photos',
-        port: '',
-        pathname: '/**', // This allows any path under the hostname
+        protocol: "https",
+        hostname: "picsum.photos",
+        port: "",
+        pathname: "/**", // This allows any path under the hostname
       },
       {
-        protocol: 'https',
-        hostname: 'encrypted-tbn0.gstatic.com',
-        port: '',
-        pathname: '/**',
+        protocol: "https",
+        hostname: "encrypted-tbn0.gstatic.com",
+        port: "",
+        pathname: "/**",
       },
       {
-        protocol: 'https',
-        hostname: 'images.unsplash.com',
-        port: '',
-        pathname: '/**',
+        protocol: "https",
+        hostname: "images.unsplash.com",
+        port: "",
+        pathname: "/**",
       },
     ],
   },
-  output: 'standalone',
-  transpilePackages: ['motion'],
-  webpack: (config, {dev}) => {
+  transpilePackages: ["motion"],
+  webpack: (config, { dev }) => {
+    if (process.env.DISABLE_BUILD_CACHE === "true") config.cache = false;
     // HMR is disabled in AI Studio via DISABLE_HMR env var.
     // Do not modifyâfile watching is disabled to prevent flickering during agent edits.
-    if (dev && process.env.DISABLE_HMR === 'true') {
+    if (dev && process.env.DISABLE_HMR === "true") {
       config.watchOptions = {
         ignored: /.*/,
       };

@@ -15,4 +15,4 @@ export function middleware(request: NextRequest) {
   }
   return NextResponse.next();
 }
-export const config = { matcher: ['/((?!_next(?:/|$)|assets(?:/|$)|favicon.ico|robots.txt|sitemap.xml).*)'] };
+export const config = { matcher: ['/((?!_next(?:/|$)|assets(?:/|$)|images(?:/|$)|favicon.ico|robots.txt|sitemap.xml).*)'] };

@@ -1,4 +1,4 @@
-﻿# Vabbot Resorts
+# Vabbot Resorts
 
 Three separate role-specific web portals use one platform data store. There are no navigation links or redirects between portals. Each portal rejects the other roles' pages and API operations and reads its own session cookie.
 
@@ -63,3 +63,9 @@ Local data is shared via `data/finder.sqlite` (or `DATABASE_PATH`). Shared persi
 ## Verification
 
 `scripts/test-isolated-portals.cjs` creates a separate temporary SQLite database and starts all three portals on ports 3100–3102 with isolated build directories. It checks account and route separation, organisation verification, listing publication, owner-only pricing, guest requests and admin controls, then captures desktop and mobile views. It uses Playwright from the adjacent fivemilli workspace; `PLAYWRIGHT_CHROMIUM_EXECUTABLE` can select an existing Chrome executable. Test database files are ignored by Git.
+
+## frontend_changes integration (25 October 2026)
+
+The merged branch adds shared Tailwind components, a PostgreSQL/Prisma schema and migrations, auth adapters and prototype dashboard pages. The active local portals retain their existing SQLite accounts and request workflow while that production migration is unfinished. Prototype NextAuth, dashboard and shared sign-in routes are blocked by the portal allowlist. Do not seed Prisma expecting those accounts to sign into the active SQLite portals.
+
+Run `npm run typecheck`, `npm run lint` and `npm test` before building. No payment or production database integration is claimed.

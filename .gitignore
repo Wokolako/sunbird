@@ -11,3 +11,6 @@ coverage/
 .next-admin/
 .impeccable/*.sqlite*
 .next-test-*/
+
+.next-*/
+tsconfig.tsbuildinfo

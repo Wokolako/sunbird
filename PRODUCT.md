@@ -1,4 +1,4 @@
-﻿# Product
+# Product
 
 <!-- impeccable:product-schema 1 -->
 
@@ -37,7 +37,7 @@ Replace the existing Sun Bird identity with Vabbot Resorts. The existing Sunbird
 ## Evidence on Hand
 
 - The user supplied the 15-page â€œVabbot Resorts â€” User Specificationâ€ dated 2 October 2026.
-- The current repository is a Next.js marketplace frontend with labelled sample discovery and booking previews, plus an interactive sample PMS. Existing server-backed organisation onboarding and admin verification remain available. Production guest booking and payment integrations are not connected.
+- The active guest, hotel manager and super-admin portals have separate local addresses, role-restricted routes and sessions. Guest accounts, verified property discovery, pricing, stay requests and administrative controls use the shared local SQLite database. The merged PostgreSQL/Prisma foundation is not yet the active store. Paid checkout and production service integrations remain outstanding.
 - No licensed provider account, real property records, verified reviews, fee percentage or legal copy has been supplied. These must not be fabricated.
 
 ## Product Principles

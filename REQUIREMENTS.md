@@ -90,3 +90,11 @@ Managers can publish complete properties after organisation verification, see on
 Super admins can inspect all managers, guest accounts, organisations, properties and stay requests; verify applications; suspend or restore manager/guest accounts; pause listings; cancel pending/confirmed requests; review recent audit history; and pause or reopen new requests platform-wide. Admin signup is not public. Existing admin bootstrap remains required to provision the first account.
 
 Three independent Vercel projects are supported via APP_PORTAL. The local shared SQLite store must be migrated to an appropriate shared persistent production database before live deployment. This change does not claim payment, notification, geocoding, production storage or automated refund integration.
+
+## Frontend branch integration — 25 October 2026
+
+The frontend_changes branch is merged while retaining three isolated portal entry points, guest-only navigation and server-backed local account/listing/request workflows. Generated Next.js cache files are excluded. The incoming shared UI components, PostgreSQL schema, migrations and authentication foundations remain available; alternate prototype dashboards and shared-login routes are not exposed by the active portals.
+
+Availability now uses one module for date-filtered discovery, new stay requests and transactional acceptance. Confirmed and checked-in requests reduce inventory each night; checkout is exclusive, closed nights are unavailable, and invalid calendar dates are rejected.
+
+Remaining release work: migrate the active SQLite workflow and stored documents to shared production database/storage, reconcile staff permissions with that data model, complete physical-room operations, connect payment and notification providers, implement policy refunds and eligible reviews, then complete deployment and accessibility acceptance. A Prisma schema alone does not complete these integrations.

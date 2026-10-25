@@ -131,7 +131,7 @@ export default function OwnerRegisterPage() {
 
   return (
     <div className="space-y-6">
-      <Card className="border-border shadow-xl">
+      <Card className="overflow-hidden border-white/80 bg-white/95 shadow-[0_24px_70px_-35px_rgba(15,35,27,0.65)] backdrop-blur-sm">
         <CardHeader className="text-center pb-4">
           <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-accent/10 text-accent">
             <Building2 className="h-6 w-6" />

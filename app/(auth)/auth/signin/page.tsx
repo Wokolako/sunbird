@@ -233,7 +233,7 @@ function SignInForm() {
 
   return (
     <div className="space-y-6">
-      <Card className="border-border shadow-xl">
+      <Card className="overflow-hidden border-white/80 bg-white/95 shadow-[0_24px_70px_-35px_rgba(15,35,27,0.65)] backdrop-blur-sm">
         <CardHeader className="text-center pb-4">
           <CardTitle className="font-serif text-2xl font-bold tracking-tight text-foreground">
             Sign In to Vabbot Resorts
@@ -471,11 +471,11 @@ function SignInForm() {
         <CardHeader className="pb-3">
           <div className="flex items-center space-x-2">
             <KeyRound className="h-4 w-4 text-accent" />
-            <CardTitle className="text-xs font-bold uppercase tracking-wider text-foreground">
+            <CardTitle className="text-xs font-bold uppercase tracking-wider text-white/90">
               Instant Sandbox Role Testing (1-Click)
             </CardTitle>
           </div>
-          <CardDescription className="text-xs">
+          <CardDescription className="text-xs *:first-letter:uppercase text-white/80">
             Click any seeded role below to automatically authenticate and navigate to its dedicated portal:
           </CardDescription>
         </CardHeader>

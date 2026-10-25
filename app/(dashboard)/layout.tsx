@@ -92,6 +92,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* PMS Navigation Links */}
         <nav className="flex-1 space-y-1 overflow-y-auto p-3">
+          {user?.role === "OWNER" && (
+            <Link
+              href="/dashboard/properties"
+              className={`flex items-center gap-3 rounded-lg px-3 py-2 text-xs font-semibold transition-all ${
+                pathname.startsWith("/dashboard/properties")
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}
+            >
+              <Building2
+                className={`h-4 w-4 shrink-0 ${
+                  pathname.startsWith("/dashboard/properties") ? "text-accent" : ""
+                }`}
+              />
+              <span>My properties</span>
+            </Link>
+          )}
           {PMS_NAV_ITEMS.map((item) => {
             const isActive =
               item.href === "/dashboard"
@@ -169,13 +186,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
 
           <div className="flex items-center space-x-3">
-            <Button
-              size="sm"
-              className="gap-1.5 bg-primary shadow-sm hover:bg-primary-800"
-            >
-              <PlusCircle className="h-4 w-4 text-accent" />
-              <span>New Reservation</span>
-            </Button>
+            {user?.role === "OWNER" && (
+              <Link
+                href="/dashboard/properties"
+                className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-card px-2.5 text-xs font-semibold text-foreground hover:bg-muted sm:px-3"
+              >
+                <Building2 className="h-3.5 w-3.5" />
+                <span>My properties</span>
+              </Link>
+            )}
+            {["OWNER", "MANAGER", "FRONT_DESK"].includes(user?.role || "") && (
+              <Link
+                href="/dashboard/reservations/new"
+                className="inline-flex h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg bg-primary px-3 text-xs font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+              >
+                <PlusCircle className="h-4 w-4 text-accent" />
+                <span>New Reservation</span>
+              </Link>
+            )}
             <Button variant="outline" size="icon" className="relative h-8 w-8">
               <Bell className="h-4 w-4" />
               <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-accent" />

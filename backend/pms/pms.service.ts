@@ -39,6 +39,21 @@ export function createUnit(user: AuthUser, body: Record<string, unknown>) {
   const id = uid(); db.prepare("INSERT INTO room_units(id,room_id,label,floor) VALUES(?,?,?,?)").run(id, roomId, label, String(body.floor || "").trim()); audit(user.id, "room_unit", id, "create", { roomId, label }); return { id };
 }
 
+export function createRoomType(user: AuthUser, body: Record<string, unknown>) {
+  const propertyId = String(body.propertyId || ""); if (!authorize(user, propertyId, ["manager"])) return null;
+  const name = String(body.name || "").trim(); const adults = Number(body.adults); const children = Number(body.children || 0); const units = Number(body.units); const rate = Number(body.nightlyRate); const beds = String(body.beds || "").trim();
+  if (!name || !beds || !Number.isInteger(adults) || adults < 1 || !Number.isInteger(children) || children < 0 || !Number.isInteger(units) || units < 1 || !Number.isFinite(rate) || rate <= 0) throw new Error("Enter a name, beds, capacity, units, and nightly rate.");
+  const id = uid(); database().prepare("INSERT INTO rooms(id,property_id,name,adult_capacity,child_capacity,beds,size_sqm,units,nightly_rate_minor) VALUES(?,?,?,?,?,?,?,?,?)").run(id, propertyId, name, adults, children, beds, Number(body.sizeSqm) || null, units, Math.round(rate * 100)); audit(user.id, "room", id, "create", { propertyId, name, units }); return { id };
+}
+
+export function updateAvailability(user: AuthUser, body: Record<string, unknown>) {
+  const propertyId = String(body.propertyId || ""); if (!authorize(user, propertyId, ["manager"])) return null; const db = database(); const room = db.prepare("SELECT * FROM rooms WHERE id=? AND property_id=?").get(String(body.roomId || ""), propertyId) as any;
+  const start = String(body.start || ""); const end = String(body.end || ""); const units = Number(body.unitsOpen); const closed = body.closed === true ? 1 : 0;
+  if (!room || !/^\d{4}-\d{2}-\d{2}$/.test(start) || !/^\d{4}-\d{2}-\d{2}$/.test(end) || end < start || !Number.isInteger(units) || units < 0 || units > room.units) throw new Error("Choose a room, dates, and an available unit count.");
+  const count = (Date.parse(`${end}T00:00:00Z`) - Date.parse(`${start}T00:00:00Z`)) / 86_400_000 + 1; if (count > 366) throw new Error("Availability updates are limited to 366 days.");
+  db.exec("BEGIN IMMEDIATE"); try { const statement = db.prepare("INSERT INTO availability(room_id,night,units_open,closed) VALUES(?,?,?,?) ON CONFLICT(room_id,night) DO UPDATE SET units_open=excluded.units_open,closed=excluded.closed"); const cursor = new Date(`${start}T00:00:00Z`); for (let i = 0; i < count; i += 1) { statement.run(room.id, cursor.toISOString().slice(0, 10), units, closed); cursor.setUTCDate(cursor.getUTCDate() + 1); } audit(user.id, "availability", room.id, "range_update", { start, end, units, closed: Boolean(closed) }); db.exec("COMMIT"); return { days: count }; } catch (error) { db.exec("ROLLBACK"); throw error; }
+}
+
 export function setUnitStatus(user: AuthUser, body: Record<string, unknown>) {
   const propertyId = String(body.propertyId || ""); if (!authorize(user, propertyId, ["manager", "front_desk", "housekeeper"])) return null;
   const status = String(body.status || ""); if (!['vacant','occupied','dirty','cleaning','maintenance','blocked'].includes(status)) throw new Error("Invalid room-unit status.");
@@ -51,6 +66,21 @@ export function createRatePlan(user: AuthUser, body: Record<string, unknown>) {
   const name = String(body.name || "").trim(); const minimumStay = Number(body.minimumStay || 1); const taxBps = Number(body.taxBps || 0); const fee = Number(body.serviceFee || 0);
   if (!name || !Number.isInteger(minimumStay) || minimumStay < 1 || !Number.isInteger(taxBps) || taxBps < 0 || taxBps > 10000 || !Number.isFinite(fee) || fee < 0) throw new Error("Invalid rate-plan values.");
   const id = uid(); database().prepare("INSERT INTO rate_plans(id,property_id,name,minimum_stay,tax_bps,service_fee_minor) VALUES(?,?,?,?,?,?)").run(id, propertyId, name, minimumStay, taxBps, Math.round(fee * 100)); audit(user.id, "rate_plan", id, "create", { name, minimumStay }); return { id };
+}
+
+export function createRateRule(user: AuthUser, body: Record<string, unknown>) {
+  const propertyId = String(body.propertyId || ""); if (!authorize(user, propertyId, ["manager"])) return null; const db = database(); const roomId = String(body.roomId || ""); const planId = String(body.ratePlanId || ""); const start = String(body.start || ""); const end = String(body.end || ""); const rate = Number(body.nightlyRate);
+  if (!db.prepare("SELECT 1 FROM rooms WHERE id=? AND property_id=?").get(roomId, propertyId) || !db.prepare("SELECT 1 FROM rate_plans WHERE id=? AND property_id=?").get(planId, propertyId) || !/^\d{4}-\d{2}-\d{2}$/.test(start) || !/^\d{4}-\d{2}-\d{2}$/.test(end) || end < start || !Number.isFinite(rate) || rate <= 0) throw new Error("Choose a room, plan, valid dates, and nightly rate.");
+  const id = uid(); db.prepare("INSERT INTO rate_rules(id,rate_plan_id,room_id,start_date,end_date,nightly_rate_minor) VALUES(?,?,?,?,?,?)").run(id, planId, roomId, start, end, Math.round(rate * 100)); audit(user.id, "rate_rule", id, "create", { propertyId, roomId, planId, start, end }); return { id };
+}
+
+export function createTask(user: AuthUser, body: Record<string, unknown>) {
+  const propertyId = String(body.propertyId || ""); if (!authorize(user, propertyId, ["manager", "front_desk"])) return null; const type = String(body.type || ""); const note = String(body.note || "").trim(); if (!['housekeeping','maintenance'].includes(type) || !note) throw new Error("Choose a task type and add a note.");
+  const id = uid(); database().prepare("INSERT INTO operational_tasks(id,property_id,room_unit_id,type,note,assigned_to,due_at) VALUES(?,?,?,?,?,?,?)").run(id, propertyId, String(body.roomUnitId || "") || null, type, note, String(body.assignedTo || "") || null, String(body.dueAt || "") || null); audit(user.id, "operational_task", id, "create", { propertyId, type }); return { id };
+}
+
+export function updateTaskStatus(user: AuthUser, body: Record<string, unknown>) {
+  const propertyId = String(body.propertyId || ""); if (!authorize(user, propertyId, ["manager", "front_desk", "housekeeper"])) return null; const status = String(body.status || ""); if (!['open','in_progress','completed'].includes(status)) throw new Error("Invalid task status."); const db = database(); const task = db.prepare("SELECT * FROM operational_tasks WHERE id=? AND property_id=?").get(String(body.taskId || ""), propertyId) as any; if (!task) throw new Error("Task not found."); db.prepare("UPDATE operational_tasks SET status=?,completed_at=? WHERE id=?").run(status, status === "completed" ? new Date().toISOString() : null, task.id); audit(user.id, "operational_task", task.id, "status", { status }); return { id: task.id, status };
 }
 
 export function quote(user: AuthUser, body: Record<string, unknown>) {

@@ -9,7 +9,7 @@ Configure Clerk to send `user.created`, `user.updated`, and `user.deleted` to `P
 - `GET /health`
 - `GET /api/pms/properties/:propertyId/dashboard`
 - `GET /api/pms/properties/:propertyId/calendar?roomId=&start=&end=`
-- `POST /api/pms/actions` for `create-unit`, `set-unit-status`, `create-rate-plan`, `upsert-staff`, and `quote`.
+- `POST /api/pms/actions` for room types, availability, room units, room status, rate plans/rules, operations tasks, staff, and quotes.
 - `POST /api/pms/properties` creates a hotel/listing draft.
 - `PATCH /api/pms/properties/:propertyId` updates listing details and its image URLs.
 - `POST /api/pms/uploads/images` stores a JPEG, PNG, or WebP image supplied as base64 and returns its `/uploads/...` URL.

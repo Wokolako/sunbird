@@ -1,0 +1,33 @@
+import assert from "node:assert/strict";
+import { DatabaseSync } from "node:sqlite";
+import { initializePmsSchema, pmsAccess, pmsReport, quoteStay } from "../lib/pms";
+
+const db = new DatabaseSync(":memory:");
+db.exec(`PRAGMA foreign_keys=ON;
+  CREATE TABLE users(id TEXT PRIMARY KEY,name TEXT,email TEXT,phone TEXT,password_hash TEXT,role TEXT,status TEXT DEFAULT 'active');
+  CREATE TABLE organisations(id TEXT PRIMARY KEY,owner_id TEXT REFERENCES users(id));
+  CREATE TABLE properties(id TEXT PRIMARY KEY,organisation_id TEXT REFERENCES organisations(id));
+  CREATE TABLE rooms(id TEXT PRIMARY KEY,property_id TEXT REFERENCES properties(id),units INTEGER,nightly_rate_minor INTEGER);
+  CREATE TABLE booking_requests(id TEXT PRIMARY KEY,guest_id TEXT,property_id TEXT REFERENCES properties(id),room_id TEXT REFERENCES rooms(id),check_in TEXT,check_out TEXT,guests INTEGER,rooms INTEGER,total_minor INTEGER,status TEXT);
+  INSERT INTO users VALUES('owner','Owner','owner@example.com','','','owner','active'),('front','Front desk','front@example.com','','','owner','active');
+  INSERT INTO organisations VALUES('org','owner'); INSERT INTO properties VALUES('property','org');
+  INSERT INTO rooms VALUES('room','property',4,10000);
+  INSERT INTO booking_requests VALUES('booking','guest','property','room','2026-11-02','2026-11-04',2,1,30000,'confirmed');`);
+initializePmsSchema(db);
+
+db.prepare("INSERT INTO staff_members(id,property_id,user_id,role) VALUES('staff','property','front','front_desk')").run();
+assert.equal(pmsAccess(db, { id: "owner" }, "property")?.role, "owner");
+assert.equal(pmsAccess(db, { id: "front" }, "property")?.role, "front_desk");
+assert.equal(pmsAccess(db, { id: "front" }, "property", ["manager"]), null);
+db.prepare("INSERT INTO rate_plans(id,property_id,name,minimum_stay,tax_bps,service_fee_minor) VALUES('plan','property','Peak',2,1500,250)").run();
+db.prepare("INSERT INTO rate_rules(id,rate_plan_id,room_id,start_date,end_date,nightly_rate_minor) VALUES('rule','plan','room','2026-11-01','2026-11-05',12000)").run();
+const quote = quoteStay(db, { id: "room", nightly_rate_minor: 10000 }, "2026-11-02", "2026-11-04", 1);
+assert.deepEqual(quote, { nights: 2, subtotalMinor: 24000, taxMinor: 3600, serviceFeeMinor: 250, totalMinor: 27850, minimumStay: 2 });
+assert.throws(() => quoteStay(db, { id: "room", nightly_rate_minor: 10000 }, "2026-11-02", "2026-11-03", 1));
+const report = pmsReport(db, "property", "2026-11-01", "2026-11-05");
+assert.equal(report.roomNights, 2);
+assert.equal(report.availableRoomNights, 16);
+assert.equal(report.occupancyPercent, 12.5);
+assert.equal(report.adrMinor, 15000);
+assert.equal(report.revparMinor, 1875);
+console.log("PASS: PMS staff access, physical operations schema, seasonal rates and hotel performance reporting");

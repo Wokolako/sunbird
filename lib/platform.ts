@@ -3,6 +3,7 @@ import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { cookies } from "next/headers";
 import { initializePaymentSchema } from "./payments/store";
+import { initializePmsSchema } from "./pms";
 
 const { DatabaseSync } = require("node:sqlite") as {
   DatabaseSync: new (file: string) => any;
@@ -104,6 +105,7 @@ export function database(): Db {
     total_minor INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'pending',
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`);
+  initializePmsSchema(db);
   initializePaymentSchema(db);
   storage.finderDb = db;
   return db;

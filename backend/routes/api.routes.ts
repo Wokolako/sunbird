@@ -2,6 +2,9 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { signIn, signOut } from "../auth/auth.service";
 import { requireAuth, type AuthenticatedRequest } from "../auth/auth.middleware";
 import * as pms from "../pms/pms.controller";
+import * as properties from "../properties/property.controller";
+import * as images from "../uploads/image.controller";
+import { readPropertyImage } from "../uploads/image.service";
 
 const json = (response: ServerResponse, status: number, body: unknown) => { response.writeHead(status, { "Content-Type": "application/json", "Cache-Control": "no-store" }); response.end(JSON.stringify(body)); };
 async function body(request: IncomingMessage) {
@@ -15,6 +18,26 @@ export async function route(request: IncomingMessage, response: ServerResponse) 
     try { const input = await body(request); const result = signIn(String(input.email || ""), String(input.password || "")); return result ? json(response, 200, result) : json(response, 401, { error: "Invalid email or password." }); } catch (error) { return json(response, 400, { error: error instanceof Error ? error.message : "Invalid request." }); }
   }
   if (request.method === "POST" && url.pathname === "/api/auth/logout") { signOut(request.headers.authorization); return json(response, 200, { ok: true }); }
+  const imageMatch = url.pathname.match(/^\/uploads\/([a-f0-9-]+\.(?:jpg|png|webp))$/);
+  if (request.method === "GET" && imageMatch) {
+    const image = readPropertyImage(imageMatch[1]);
+    if (!image) return json(response, 404, { error: "Image not found." });
+    response.writeHead(200, { "Content-Type": image.mime, "Cache-Control": "public, max-age=86400", "X-Content-Type-Options": "nosniff" }); response.end(image.content); return;
+  }
+  if (request.method === "POST" && url.pathname === "/api/pms/properties") {
+    if (!requireAuth(request as AuthenticatedRequest, response)) return;
+    try { return properties.create(request as AuthenticatedRequest, response, await body(request)); } catch (error) { return json(response, 400, { error: error instanceof Error ? error.message : "Invalid request." }); }
+  }
+  const propertyMatch = url.pathname.match(/^\/api\/pms\/properties\/([^/]+)(?:\/(publish))?$/);
+  if (propertyMatch && ((request.method === "PATCH" && !propertyMatch[2]) || (request.method === "POST" && propertyMatch[2] === "publish"))) {
+    if (!requireAuth(request as AuthenticatedRequest, response)) return;
+    if (request.method === "POST") return properties.publish(request as AuthenticatedRequest, response, propertyMatch[1]);
+    try { return properties.update(request as AuthenticatedRequest, response, propertyMatch[1], await body(request)); } catch (error) { return json(response, 400, { error: error instanceof Error ? error.message : "Invalid request." }); }
+  }
+  if (request.method === "POST" && url.pathname === "/api/pms/uploads/images") {
+    if (!requireAuth(request as AuthenticatedRequest, response)) return;
+    try { return images.upload(request as AuthenticatedRequest, response, await body(request)); } catch (error) { return json(response, 400, { error: error instanceof Error ? error.message : "Invalid request." }); }
+  }
   const match = url.pathname.match(/^\/api\/pms\/properties\/([^/]+)\/(dashboard|calendar)$/);
   if (request.method === "GET" && match) {
     if (!requireAuth(request as AuthenticatedRequest, response)) return;

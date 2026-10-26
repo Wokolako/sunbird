@@ -1,0 +1,8 @@
+import type { ServerResponse } from "node:http";
+import type { AuthenticatedRequest } from "../auth/auth.middleware";
+import * as properties from "./property.service";
+
+const json = (response: ServerResponse, status: number, data: unknown) => { response.writeHead(status, { "Content-Type": "application/json", "Cache-Control": "no-store" }); response.end(JSON.stringify(data)); };
+export function create(request: AuthenticatedRequest, response: ServerResponse, body: Record<string, unknown>) { try { const data = properties.createProperty(request.user!, body); return data ? json(response, 201, { ok: true, data }) : json(response, 403, { error: "Owner access required." }); } catch (error) { return json(response, 400, { error: error instanceof Error ? error.message : "Could not create hotel." }); } }
+export function update(request: AuthenticatedRequest, response: ServerResponse, propertyId: string, body: Record<string, unknown>) { try { const data = properties.updateProperty(request.user!, propertyId, body); return data ? json(response, 200, { ok: true, data }) : json(response, 403, { error: "Property access denied." }); } catch (error) { return json(response, 400, { error: error instanceof Error ? error.message : "Could not update hotel." }); } }
+export function publish(request: AuthenticatedRequest, response: ServerResponse, propertyId: string) { try { const data = properties.publishProperty(request.user!, propertyId); return data ? json(response, 200, { ok: true, data }) : json(response, 403, { error: "Property access denied." }); } catch (error) { return json(response, 400, { error: error instanceof Error ? error.message : "Could not publish hotel." }); } }

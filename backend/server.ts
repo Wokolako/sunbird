@@ -7,7 +7,7 @@ database();
 const server = createServer(async (request, response) => {
   response.setHeader("Access-Control-Allow-Origin", config.allowedOrigin);
   response.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  response.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  response.setHeader("Access-Control-Allow-Methods", "GET, POST, PATCH, OPTIONS");
   if (request.method === "OPTIONS") { response.writeHead(204); response.end(); return; }
   try { await route(request, response); } catch (error) { console.error(error); response.writeHead(500, { "Content-Type": "application/json" }); response.end(JSON.stringify({ error: "Internal server error." })); }
 });

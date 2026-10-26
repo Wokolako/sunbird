@@ -4,7 +4,7 @@ export function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
   const allowed = portal === 'admin' ? ['/', '/admin', '/api/platform']
     : portal === 'management' ? ['/', '/manager', '/api/platform']
-    : ['/', '/search', '/saved', '/bookings', '/account', '/hotels', '/resorts', '/api/platform'];
+    : ['/', '/search', '/saved', '/bookings', '/account', '/hotels', '/resorts', '/api/platform', '/api/stripe/webhook'];
   if (!allowed.includes(path) && !(portal === 'guest' && path.startsWith('/stays/'))) {
     return new NextResponse('This page is not available in this portal.', { status: 404 });
   }

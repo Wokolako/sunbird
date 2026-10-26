@@ -13,7 +13,7 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:seed": "prisma db seed",
-    "test": "tsx tests/auth-guard.test.ts && tsx tests/inventory.test.ts",
+    "test": "tsx tests/auth-guard.test.ts && tsx tests/inventory.test.ts && tsx tests/stripe-payments.test.ts",
     "typecheck": "tsc --noEmit",
     "dev:guest": "node scripts/run-portal.mjs guest dev",
     "dev:manage": "node scripts/run-portal.mjs management dev",
@@ -39,6 +39,7 @@
     "prisma": "^6.19.3",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
+    "stripe": "^23.0.1",
     "tailwind-merge": "^3.7.0",
     "zod": "^4.6.7"
   },

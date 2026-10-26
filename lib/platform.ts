@@ -2,6 +2,7 @@ import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { cookies } from "next/headers";
+import { initializePaymentSchema } from "./payments/store";
 
 const { DatabaseSync } = require("node:sqlite") as {
   DatabaseSync: new (file: string) => any;
@@ -89,7 +90,6 @@ export function database(): Db {
   db.exec(
     "CREATE TABLE IF NOT EXISTS platform_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)"
   );
-  storage.finderDb = db;
   if (
     !(db.prepare("PRAGMA table_info(users)").all() as Row[]).some(
       (column) => column.name === "status"
@@ -104,6 +104,8 @@ export function database(): Db {
     total_minor INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'pending',
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`);
+  initializePaymentSchema(db);
+  storage.finderDb = db;
   return db;
 }
 

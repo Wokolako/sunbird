@@ -3,8 +3,8 @@ import { authenticate, type AuthUser } from "./auth.service";
 
 export type AuthenticatedRequest = IncomingMessage & { user?: AuthUser };
 
-export function requireAuth(request: AuthenticatedRequest, response: ServerResponse) {
-  const user = authenticate(request.headers.authorization);
+export async function requireAuth(request: AuthenticatedRequest, response: ServerResponse) {
+  const user = await authenticate(request.headers.authorization);
   if (!user) {
     response.writeHead(401, { "Content-Type": "application/json" });
     response.end(JSON.stringify({ error: "Authentication required." }));

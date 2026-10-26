@@ -2,7 +2,9 @@
 
 Run `npm run backend:dev` to start the dedicated API at `http://127.0.0.1:4000`.
 
-Authentication is bearer-token based. Call `POST /api/auth/login` with `email` and `password`, then send `Authorization: Bearer <token>` to PMS endpoints.
+Clerk owns login and session management. The frontend sends a Clerk session token as `Authorization: Bearer <token>` to PMS endpoints. The backend verifies it and resolves its `clerk_user_id` to the platform user record in SQLite.
+
+Configure Clerk to send `user.created`, `user.updated`, and `user.deleted` to `POST /api/webhooks/clerk`. Every webhook is signature-verified and deduplicated before it updates the local user record.
 
 - `GET /health`
 - `GET /api/pms/properties/:propertyId/dashboard`

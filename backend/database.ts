@@ -52,6 +52,12 @@ export function database() {
     );
     CREATE TABLE IF NOT EXISTS audit_log (id TEXT PRIMARY KEY, actor_id TEXT NOT NULL, entity_type TEXT NOT NULL, entity_id TEXT NOT NULL, action TEXT NOT NULL, before_json TEXT, after_json TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
   `);
+  const userColumns = db.prepare("PRAGMA table_info(users)").all() as Array<{ name: string }>;
+  if (!userColumns.some((column) => column.name === "clerk_user_id")) db.exec("ALTER TABLE users ADD COLUMN clerk_user_id TEXT");
+  db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_clerk_user_id ON users(clerk_user_id) WHERE clerk_user_id IS NOT NULL");
+  db.exec(`CREATE TABLE IF NOT EXISTS clerk_webhook_events (
+    id TEXT PRIMARY KEY, event_type TEXT NOT NULL, received_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`);
   initializePmsSchema(db);
   instance = db;
   return db;

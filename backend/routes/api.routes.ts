@@ -1,23 +1,28 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { signIn, signOut } from "../auth/auth.service";
 import { requireAuth, type AuthenticatedRequest } from "../auth/auth.middleware";
 import * as pms from "../pms/pms.controller";
 import * as properties from "../properties/property.controller";
 import * as images from "../uploads/image.controller";
 import { readPropertyImage } from "../uploads/image.service";
+import { syncClerkWebhook } from "../auth/clerk-webhook.service";
 
 const json = (response: ServerResponse, status: number, body: unknown) => { response.writeHead(status, { "Content-Type": "application/json", "Cache-Control": "no-store" }); response.end(JSON.stringify(body)); };
 async function body(request: IncomingMessage) {
   let raw = ""; for await (const chunk of request) raw += chunk; if (!raw) return {}; try { return JSON.parse(raw) as Record<string, unknown>; } catch { throw new Error("Valid JSON is required."); }
 }
+async function rawBody(request: IncomingMessage) { let raw = ""; for await (const chunk of request) raw += chunk; return raw; }
 
 export async function route(request: IncomingMessage, response: ServerResponse) {
   const url = new URL(request.url || "/", "http://localhost");
   if (request.method === "GET" && url.pathname === "/health") return json(response, 200, { ok: true });
-  if (request.method === "POST" && url.pathname === "/api/auth/login") {
-    try { const input = await body(request); const result = signIn(String(input.email || ""), String(input.password || "")); return result ? json(response, 200, result) : json(response, 401, { error: "Invalid email or password." }); } catch (error) { return json(response, 400, { error: error instanceof Error ? error.message : "Invalid request." }); }
+  if (request.method === "POST" && url.pathname === "/api/webhooks/clerk") {
+    try {
+      const headers = new Headers();
+      for (const [name, value] of Object.entries(request.headers)) if (typeof value === "string") headers.set(name, value);
+      const result = await syncClerkWebhook(headers, await rawBody(request));
+      return json(response, 200, { ok: true, ...result });
+    } catch (error) { return json(response, 400, { error: error instanceof Error ? error.message : "Webhook verification failed." }); }
   }
-  if (request.method === "POST" && url.pathname === "/api/auth/logout") { signOut(request.headers.authorization); return json(response, 200, { ok: true }); }
   const imageMatch = url.pathname.match(/^\/uploads\/([a-f0-9-]+\.(?:jpg|png|webp))$/);
   if (request.method === "GET" && imageMatch) {
     const image = readPropertyImage(imageMatch[1]);
@@ -25,26 +30,26 @@ export async function route(request: IncomingMessage, response: ServerResponse) 
     response.writeHead(200, { "Content-Type": image.mime, "Cache-Control": "public, max-age=86400", "X-Content-Type-Options": "nosniff" }); response.end(image.content); return;
   }
   if (request.method === "POST" && url.pathname === "/api/pms/properties") {
-    if (!requireAuth(request as AuthenticatedRequest, response)) return;
+    if (!(await requireAuth(request as AuthenticatedRequest, response))) return;
     try { return properties.create(request as AuthenticatedRequest, response, await body(request)); } catch (error) { return json(response, 400, { error: error instanceof Error ? error.message : "Invalid request." }); }
   }
   const propertyMatch = url.pathname.match(/^\/api\/pms\/properties\/([^/]+)(?:\/(publish))?$/);
   if (propertyMatch && ((request.method === "PATCH" && !propertyMatch[2]) || (request.method === "POST" && propertyMatch[2] === "publish"))) {
-    if (!requireAuth(request as AuthenticatedRequest, response)) return;
+    if (!(await requireAuth(request as AuthenticatedRequest, response))) return;
     if (request.method === "POST") return properties.publish(request as AuthenticatedRequest, response, propertyMatch[1]);
     try { return properties.update(request as AuthenticatedRequest, response, propertyMatch[1], await body(request)); } catch (error) { return json(response, 400, { error: error instanceof Error ? error.message : "Invalid request." }); }
   }
   if (request.method === "POST" && url.pathname === "/api/pms/uploads/images") {
-    if (!requireAuth(request as AuthenticatedRequest, response)) return;
+    if (!(await requireAuth(request as AuthenticatedRequest, response))) return;
     try { return images.upload(request as AuthenticatedRequest, response, await body(request)); } catch (error) { return json(response, 400, { error: error instanceof Error ? error.message : "Invalid request." }); }
   }
   const match = url.pathname.match(/^\/api\/pms\/properties\/([^/]+)\/(dashboard|calendar)$/);
   if (request.method === "GET" && match) {
-    if (!requireAuth(request as AuthenticatedRequest, response)) return;
+    if (!(await requireAuth(request as AuthenticatedRequest, response))) return;
     return match[2] === "dashboard" ? pms.dashboard(request as AuthenticatedRequest, response, match[1]) : pms.calendar(request as AuthenticatedRequest, response, match[1], url.searchParams);
   }
   if (request.method === "POST" && url.pathname === "/api/pms/actions") {
-    if (!requireAuth(request as AuthenticatedRequest, response)) return;
+    if (!(await requireAuth(request as AuthenticatedRequest, response))) return;
     try { return pms.action(request as AuthenticatedRequest, response, await body(request)); } catch (error) { return json(response, 400, { error: error instanceof Error ? error.message : "Invalid request." }); }
   }
   return json(response, 404, { error: "Route not found." });

@@ -102,7 +102,7 @@ export default function NewReservationPage() {
     let active = true;
     async function loadProperties() {
       try {
-        const response = await fetch("/api/dashboard/reservations", {
+        const response = await fetch("/api/dashboard/reservations?propertiesOnly=true", {
           cache: "no-store",
         });
         const data = await response.json();
@@ -110,10 +110,25 @@ export default function NewReservationPage() {
           throw new Error(data.error || "Could not load your properties.");
         if (!active) return;
         setProperties(data.properties || []);
-        const firstProperty = data.properties?.[0];
-        if (firstProperty) {
-          setPropertyId(firstProperty.id);
-          setRoomCategoryId(firstProperty.roomCategories?.[0]?.id || "");
+        const requestedPropertyId = new URLSearchParams(window.location.search).get(
+          "propertyId"
+        );
+        const requestedRoomCategoryId = new URLSearchParams(window.location.search).get(
+          "roomCategoryId"
+        );
+        const initialProperty =
+          data.properties?.find(
+            (property: PropertyOption) => property.id === requestedPropertyId
+          ) || data.properties?.[0];
+        if (initialProperty) {
+          setPropertyId(initialProperty.id);
+          setRoomCategoryId(
+            initialProperty.roomCategories?.find(
+              (category: CategoryOption) => category.id === requestedRoomCategoryId
+            )?.id ||
+              initialProperty.roomCategories?.[0]?.id ||
+              ""
+          );
         }
       } catch (loadError) {
         if (active) {
@@ -131,6 +146,20 @@ export default function NewReservationPage() {
     return () => {
       active = false;
     };
+  }, []);
+
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const requestedCheckIn = params.get("checkIn") || "";
+    const requestedCheckOut = params.get("checkOut") || "";
+    if (
+      /^\d{4}-\d{2}-\d{2}$/.test(requestedCheckIn) &&
+      /^\d{4}-\d{2}-\d{2}$/.test(requestedCheckOut) &&
+      requestedCheckOut > requestedCheckIn
+    ) {
+      setCheckIn(requestedCheckIn);
+      setCheckOut(requestedCheckOut);
+    }
   }, []);
 
   React.useEffect(() => {

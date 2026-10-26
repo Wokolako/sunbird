@@ -398,6 +398,7 @@ model Reservation {
   review               Review?
 
   @@index([propertyId, checkInDate, checkOutDate, status])
+  @@index([propertyId, createdAt(sort: Desc)])
   @@index([guestId])
   @@index([roomUnitId])
 }
@@ -431,6 +432,7 @@ model Payment {
   reservation          Reservation   @relation(fields: [reservationId], references: [id], onDelete: Cascade)
 
   @@index([reservationId, status])
+  @@index([reservationId, createdAt(sort: Desc)])
 }
 
 model Invoice {

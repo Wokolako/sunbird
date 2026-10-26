@@ -67,9 +67,12 @@ export default function ReservationsPage() {
     let active = true;
     async function loadReservations() {
       try {
-        const response = await fetch("/api/dashboard/reservations", {
-          cache: "no-store",
-        });
+        const response = await fetch(
+          "/api/dashboard/reservations?reservationsOnly=true",
+          {
+            cache: "no-store",
+          }
+        );
         const data = await response.json();
         if (!response.ok) {
           throw new Error(data.error || "Could not load reservations.");

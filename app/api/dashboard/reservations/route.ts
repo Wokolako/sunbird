@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   IdVerificationStatus,
+  PaymentStatus,
   Prisma,
   ReservationSource,
   ReservationStatus,
   RoomUnitStatus,
   UserRole,
 } from "@prisma/client";
+import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { authOptions } from "@/lib/auth";
 import { getDashboardStaff } from "@/lib/dashboard-staff";
 import { calculateBaseRoomTotal } from "@/lib/reservation-pricing";
 
@@ -38,6 +41,22 @@ function fail(error: string, status = 400) {
   return NextResponse.json({ error }, { status });
 }
 
+type ReservationListRow = {
+  id: string;
+  referenceCode: string;
+  checkInDate: Date;
+  checkOutDate: Date;
+  totalAmount: string;
+  currency: string;
+  status: ReservationStatus;
+  source: ReservationSource;
+  property: { name: string };
+  guest: { name: string | null; email: string; phone: string | null };
+  roomCategory: { name: string };
+  roomUnit: { name: string } | null;
+  payments: Array<{ status: PaymentStatus; paymentType: string }>;
+};
+
 function parseDate(value: string) {
   const date = new Date(`${value}T00:00:00.000Z`);
   return Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== value
@@ -65,10 +84,106 @@ function isBookingConflict(error: unknown) {
 
 export async function GET(request: NextRequest) {
   try {
+    const propertiesOnly = request.nextUrl.searchParams.get("propertiesOnly") === "true";
+    const requestedPropertyId = request.nextUrl.searchParams.get("propertyId");
+    const requestedCategoryId = request.nextUrl.searchParams.get("roomCategoryId");
+    const checkInValue = request.nextUrl.searchParams.get("checkIn");
+    const checkOutValue = request.nextUrl.searchParams.get("checkOut");
+    const reservationsOnly =
+      request.nextUrl.searchParams.get("reservationsOnly") === "true";
+
+    if (
+      reservationsOnly &&
+      (!requestedPropertyId || !requestedCategoryId || !checkInValue || !checkOutValue)
+    ) {
+      const session = await getServerSession(authOptions);
+      const email = session?.user?.email;
+      if (!email) return fail("Property staff access required.", 403);
+
+      const reservations = await prisma.$queryRaw<ReservationListRow[]>`
+        SELECT
+          r."id",
+          r."referenceCode",
+          r."checkInDate",
+          r."checkOutDate",
+          r."totalAmount"::text AS "totalAmount",
+          r."currency",
+          r."status",
+          r."source",
+          jsonb_build_object('name', p."name") AS "property",
+          jsonb_build_object(
+            'name', guest."name",
+            'email', guest."email",
+            'phone', guest."phone"
+          ) AS "guest",
+          jsonb_build_object('name', category."name") AS "roomCategory",
+          CASE
+            WHEN unit."id" IS NULL THEN NULL
+            ELSE jsonb_build_object('name', unit."name")
+          END AS "roomUnit",
+          COALESCE(latest_payment."payments", '[]'::jsonb) AS "payments"
+        FROM "Reservation" r
+        JOIN "Property" p ON p."id" = r."propertyId"
+        JOIN "User" guest ON guest."id" = r."guestId"
+        JOIN "RoomCategory" category ON category."id" = r."roomCategoryId"
+        LEFT JOIN "RoomUnit" unit ON unit."id" = r."roomUnitId"
+        JOIN "User" staff_user ON staff_user."email" = ${email}
+        LEFT JOIN LATERAL (
+          SELECT jsonb_agg(
+            jsonb_build_object(
+              'status', payment."status",
+              'paymentType', payment."paymentType"
+            )
+            ORDER BY payment."createdAt" DESC
+          ) AS "payments"
+          FROM (
+            SELECT "status", "paymentType", "createdAt"
+            FROM "Payment"
+            WHERE "reservationId" = r."id"
+            ORDER BY "createdAt" DESC
+            LIMIT 1
+          ) payment
+        ) latest_payment ON TRUE
+        WHERE p."status" = 'APPROVED'
+          AND (
+            (staff_user."role" = 'OWNER' AND EXISTS (
+              SELECT 1 FROM "PropertyStaff" membership
+              WHERE membership."propertyId" = p."id"
+                AND membership."userId" = staff_user."id"
+                AND membership."role" = 'OWNER'
+                AND membership."active" = TRUE
+            ))
+            OR (staff_user."role" = 'MANAGER' AND EXISTS (
+              SELECT 1 FROM "PropertyStaff" membership
+              WHERE membership."propertyId" = p."id"
+                AND membership."userId" = staff_user."id"
+                AND membership."role" = 'MANAGER'
+                AND membership."active" = TRUE
+            ))
+            OR (staff_user."role" = 'FRONT_DESK' AND EXISTS (
+              SELECT 1 FROM "PropertyStaff" membership
+              WHERE membership."propertyId" = p."id"
+                AND membership."userId" = staff_user."id"
+                AND membership."role" = 'FRONT_DESK'
+                AND membership."active" = TRUE
+            ))
+          )
+        ORDER BY r."createdAt" DESC
+        LIMIT 100
+      `;
+
+      return NextResponse.json(
+        {
+          reservations,
+        },
+        { headers: { "Cache-Control": "no-store" } }
+      );
+    }
+
     const staff = await getDashboardStaff();
     if (!staff) return fail("Property staff access required.", 403);
 
-    const memberships = await prisma.propertyStaff.findMany({
+    const membershipsPromise = prisma.propertyStaff.findMany({
       where: {
         userId: staff.id,
         role: staff.staffRole,
@@ -96,40 +211,47 @@ export async function GET(request: NextRequest) {
       orderBy: { assignedAt: "asc" },
     });
 
-    const properties = memberships.map(({ property }) => property);
-    const requestedPropertyId = request.nextUrl.searchParams.get("propertyId");
-    const requestedCategoryId = request.nextUrl.searchParams.get("roomCategoryId");
-    const checkInValue = request.nextUrl.searchParams.get("checkIn");
-    const checkOutValue = request.nextUrl.searchParams.get("checkOut");
-
     if (!requestedPropertyId || !requestedCategoryId || !checkInValue || !checkOutValue) {
-      const propertyIds = properties.map(({ id }) => id);
-      const reservations = propertyIds.length
-        ? await prisma.reservation.findMany({
-            where: { propertyId: { in: propertyIds } },
-            select: {
-              id: true,
-              referenceCode: true,
-              checkInDate: true,
-              checkOutDate: true,
-              totalAmount: true,
-              currency: true,
-              status: true,
-              source: true,
-              property: { select: { name: true } },
-              guest: { select: { name: true, email: true, phone: true } },
-              roomCategory: { select: { name: true } },
-              roomUnit: { select: { name: true } },
-              payments: {
-                select: { status: true, paymentType: true },
-                orderBy: { createdAt: "desc" },
-                take: 1,
+      const [memberships, reservations] = await Promise.all([
+        membershipsPromise,
+        propertiesOnly
+          ? Promise.resolve([])
+          : prisma.reservation.findMany({
+              where: {
+                property: {
+                  status: "APPROVED",
+                  staff: {
+                    some: {
+                      userId: staff.id,
+                      role: staff.staffRole,
+                      active: true,
+                    },
+                  },
+                },
               },
-            },
-            orderBy: { createdAt: "desc" },
-            take: 100,
-          })
-        : [];
+              select: {
+                referenceCode: true,
+                checkInDate: true,
+                checkOutDate: true,
+                totalAmount: true,
+                currency: true,
+                status: true,
+                source: true,
+                property: { select: { name: true } },
+                guest: { select: { name: true, email: true, phone: true } },
+                roomCategory: { select: { name: true } },
+                roomUnit: { select: { name: true } },
+                payments: {
+                  select: { status: true, paymentType: true },
+                  orderBy: { createdAt: "desc" },
+                  take: 1,
+                },
+              },
+              orderBy: { createdAt: "desc" },
+              take: 100,
+            }),
+      ]);
+      const properties = memberships.map(({ property }) => property);
 
       return NextResponse.json({
         properties,
@@ -140,6 +262,8 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    const memberships = await membershipsPromise;
+    const properties = memberships.map(({ property }) => property);
     const checkIn = parseDate(checkInValue);
     const checkOut = parseDate(checkOutValue);
     if (!checkIn || !checkOut || checkOut <= checkIn) {

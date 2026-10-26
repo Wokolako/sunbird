@@ -22,36 +22,31 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/avatar";
 
-const PMS_NAV_ITEMS = [
+const PMS_NAV_SECTIONS = [
   {
-    name: "Front Desk Overview",
-    href: "/dashboard",
-    icon: Building2,
+    name: "Operations",
+    items: [
+      { name: "Front Desk Overview", href: "/dashboard", icon: Building2 },
+      {
+        name: "Reservations & Folios",
+        href: "/dashboard/reservations",
+        icon: ClipboardList,
+      },
+      { name: "Availability Calendar", href: "/dashboard/calendar", icon: CalendarDays },
+    ],
   },
   {
-    name: "Reservations & Folios",
-    href: "/dashboard/reservations",
-    icon: ClipboardList,
+    name: "Property Management",
+    items: [
+      { name: "Rooms & Housekeeping", href: "/dashboard/rooms", icon: BedDouble },
+      { name: "Staff & Team", href: "/dashboard/staff", icon: Users2 },
+    ],
   },
   {
-    name: "Availability Calendar",
-    href: "/dashboard/calendar",
-    icon: CalendarDays,
-  },
-  {
-    name: "Rooms & Housekeeping",
-    href: "/dashboard/rooms",
-    icon: BedDouble,
-  },
-  {
-    name: "Staff & Team",
-    href: "/dashboard/staff",
-    icon: Users2,
-  },
-  {
-    name: "Property Settings",
-    href: "/dashboard/settings",
-    icon: SlidersHorizontal,
+    name: "Settings",
+    items: [
+      { name: "Property Settings", href: "/dashboard/settings", icon: SlidersHorizontal },
+    ],
   },
 ];
 
@@ -66,24 +61,31 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-border bg-card md:flex">
         {/* Active Property Switcher */}
         <div className="border-b border-border p-4">
-          <div className="mb-2 flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              Integrated PMS
-            </span>
+          <div className="mb-4 flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-800 text-[10px] font-extrabold tracking-wide text-white shadow-sm">
+              PMS
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-xs font-bold text-foreground">Vabbot Resorts</p>
+              <p className="text-[10px] text-muted-foreground">Property Operations</p>
+            </div>
             <Badge
               variant="outline"
-              className="border-emerald-300 bg-emerald-50 text-xs text-emerald-800"
+              className="ml-auto border-emerald-300 bg-emerald-50 text-xs text-emerald-800"
             >
               Live
             </Badge>
           </div>
+          <p className="mb-1.5 px-1 text-[9px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
+            Active property
+          </p>
           <button className="hover:bg-muted/50 flex w-full items-center justify-between rounded-lg border border-border p-2.5 text-left transition">
             <div className="min-w-0 pr-2">
               <strong className="block truncate text-xs font-bold text-foreground">
-                Lake Haven Luxury Resort
+                Windermere Lakeside Retreat &amp; Lodge
               </strong>
               <span className="block truncate text-xs text-muted-foreground">
-                Lake Safari Collection
+                Lake District · Lakefront
               </span>
             </div>
             <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -91,46 +93,55 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
 
         {/* PMS Navigation Links */}
-        <nav className="flex-1 space-y-1 overflow-y-auto p-3">
-          {user?.role === "OWNER" && (
-            <Link
-              href="/dashboard/properties"
-              className={`flex items-center gap-3 rounded-lg px-3 py-2 text-xs font-semibold transition-all ${
-                pathname.startsWith("/dashboard/properties")
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              }`}
-            >
-              <Building2
-                className={`h-4 w-4 shrink-0 ${
-                  pathname.startsWith("/dashboard/properties") ? "text-accent" : ""
-                }`}
-              />
-              <span>My properties</span>
-            </Link>
-          )}
-          {PMS_NAV_ITEMS.map((item) => {
-            const isActive =
-              item.href === "/dashboard"
-                ? pathname === "/dashboard"
-                : pathname.startsWith(item.href);
+        <nav
+          aria-label="Property operations"
+          className="flex-1 space-y-5 overflow-y-auto p-3"
+        >
+          {PMS_NAV_SECTIONS.map((section) => (
+            <div key={section.name}>
+              <p className="mb-2 px-3 text-[9px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+                {section.name}
+              </p>
+              <div className="space-y-1">
+                {section.name === "Property Management" && user?.role === "OWNER" && (
+                  <Link
+                    href="/dashboard/properties"
+                    className={`flex items-center gap-3 rounded-lg px-3 py-2 text-xs font-semibold transition-all ${
+                      pathname.startsWith("/dashboard/properties")
+                        ? "bg-emerald-800 text-white shadow-sm"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    }`}
+                  >
+                    <Building2 className="h-4 w-4 shrink-0" />
+                    <span>My properties</span>
+                  </Link>
+                )}
+                {section.items.map((item) => {
+                  const isActive =
+                    item.href === "/dashboard"
+                      ? pathname === "/dashboard"
+                      : pathname.startsWith(item.href);
 
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2 text-xs font-semibold transition-all ${
-                  isActive
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                }`}
-              >
-                <Icon className={`h-4 w-4 shrink-0 ${isActive ? "text-accent" : ""}`} />
-                <span>{item.name}</span>
-              </Link>
-            );
-          })}
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      aria-current={isActive ? "page" : undefined}
+                      className={`flex items-center gap-3 rounded-lg px-3 py-2 text-xs font-semibold transition-all ${
+                        isActive
+                          ? "bg-emerald-800 text-white shadow-sm"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      }`}
+                    >
+                      <Icon className="h-4 w-4 shrink-0" />
+                      <span>{item.name}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
 
         {/* User Card & Portal Actions */}

@@ -97,44 +97,6 @@ export default function MarketplaceHomePage() {
         </div>
       </section>
 
-      {/* Role Testing Interactive Banner */}
-      <section className="bg-secondary/60 border-y border-border py-6">
-        <div className="container mx-auto px-4 sm:px-8">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-accent">
-                Vabbot Resorts Multi-Role Architecture
-              </span>
-              <p className="text-xs sm:text-sm text-muted-foreground">
-                Seamless role separation between guests, property operators, and platform superintendents:
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Link href="/auth/register">
-                <Button variant="outline" size="sm" className="gap-1.5 text-xs font-semibold">
-                  Guest Registration
-                </Button>
-              </Link>
-              <Link href="/auth/register/owner">
-                <Button variant="default" size="sm" className="gap-1.5 text-xs font-semibold bg-accent text-accent-foreground hover:bg-accent/90">
-                  Owner Onboarding
-                </Button>
-              </Link>
-              <Link href="/dashboard">
-                <Button variant="outline" size="sm" className="gap-1.5 text-xs">
-                  PMS Dashboard
-                </Button>
-              </Link>
-              <Link href="/admin">
-                <Button variant="secondary" size="sm" className="gap-1.5 text-xs">
-                  Super Admin
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* Featured Properties Grid */}
       <section className="py-16">
         <div className="container mx-auto px-4 sm:px-8">

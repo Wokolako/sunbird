@@ -5,24 +5,21 @@ import { useSession } from "next-auth/react";
 import Link from "next/link";
 import {
   User,
-  Calendar,
   MapPin,
   ShieldCheck,
   CreditCard,
   Phone,
-  Mail,
-  Home,
-  Clock,
   ArrowRight,
   Save,
   CheckCircle2,
   AlertCircle,
-  FileText,
   Sparkles,
-  BedDouble,
-  Globe,
-  Coins,
   Receipt,
+  MessageSquare,
+  Download,
+  Info,
+  ExternalLink,
+  Pencil,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,23 +33,49 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Dialog as ModalDialog } from "@/components/ui/dialog";
 
 interface ReservationItem {
   id: string;
   referenceCode: string;
   status: string;
-  checkIn: string;
-  checkOut: string;
-  nights?: number;
-  adults?: number;
-  children?: number;
-  totalAmount: number;
-  currency?: string;
-  totalAmountGbp?: number;
+  checkInDate: string;
+  checkOutDate: string;
+  adultsCount: number;
+  childrenCount: number;
+  totalAmount: string | number;
+  currency: string;
+  specialRequests?: string | null;
+  createdAt?: string;
+  cancellationRequested?: boolean;
+  payments?: Array<{
+    amount: string | number;
+    currency: string;
+    status: string;
+    paymentType: string;
+  }>;
+  invoices?: Array<{
+    invoiceNumber: string;
+    pdfUrl: string | null;
+    status: string;
+    totalAmount: string | number;
+    currency: string;
+    issuedAt: string;
+  }>;
   property?: {
     name: string;
     city: string;
     address: string;
+    contactEmail?: string | null;
+    contactPhone?: string | null;
+    checkInTime?: string;
   };
   roomCategory?: {
     name: string;
@@ -62,6 +85,26 @@ interface ReservationItem {
     unitNumber?: string;
   };
   idVerificationStatus?: string;
+}
+
+type ReservationRequestType = "CANCELLATION" | "DATE_CHANGE";
+
+function dateOnlyLabel(value: string) {
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeZone: "UTC",
+  }).format(new Date(`${value.slice(0, 10)}T00:00:00.000Z`));
+}
+
+function reservationNights(reservation: ReservationItem) {
+  return Math.max(
+    1,
+    Math.round(
+      (new Date(`${reservation.checkOutDate.slice(0, 10)}T00:00:00Z`).getTime() -
+        new Date(`${reservation.checkInDate.slice(0, 10)}T00:00:00Z`).getTime()) /
+        86_400_000
+    )
+  );
 }
 
 export default function GuestAccountPage() {
@@ -95,6 +138,14 @@ export default function GuestAccountPage() {
   const [saving, setSaving] = React.useState(false);
   const [saveSuccess, setSaveSuccess] = React.useState<string | null>(null);
   const [saveError, setSaveError] = React.useState<string | null>(null);
+  const [requestTarget, setRequestTarget] = React.useState<{
+    reservation: ReservationItem;
+    type: ReservationRequestType;
+  } | null>(null);
+  const [requestNote, setRequestNote] = React.useState("");
+  const [requestSending, setRequestSending] = React.useState(false);
+  const [requestError, setRequestError] = React.useState("");
+  const [requestSuccess, setRequestSuccess] = React.useState("");
 
   // Fetch initial profile & stay history
   React.useEffect(() => {
@@ -135,41 +186,10 @@ export default function GuestAccountPage() {
               "High floor lake view suite preferred, hypoallergenic bedding."
           );
 
-          if (u.reservations && u.reservations.length > 0) {
-            setReservations(u.reservations);
-          } else {
-            // Default verified reservation placeholder
-            setReservations([
-              {
-                id: "res-demo-seed",
-                referenceCode: "RES-2026-8941",
-                status: "UPCOMING",
-                checkIn: "2026-11-14T14:00:00Z",
-                checkOut: "2026-11-17T11:00:00Z",
-                nights: 3,
-                adults: 2,
-                children: 0,
-                totalAmount: 555000,
-                currency: "GBP",
-                totalAmountGbp: 275,
-                property: {
-                  name: "Lake Haven Luxury Resort & Lodge",
-                  city: "Windermere",
-                  address: "Lakeside Drive, Lake District",
-                },
-                roomCategory: {
-                  name: "Executive Lakeview Suite",
-                },
-                roomUnit: {
-                  unitNumber: "Suite 101",
-                },
-                idVerificationStatus: "VERIFIED",
-              },
-            ]);
-          }
+          setReservations(u.reservations || []);
         }
       } catch (err) {
-        console.warn("Could not load from API, using default guest session values", err);
+        console.error("Could not load guest profile", err);
         if (isMounted) {
           setName(user?.name || "Thoko Mwale (Guest)");
           setEmail(user?.email || "guest@example.com");
@@ -179,6 +199,7 @@ export default function GuestAccountPage() {
           setCountry("United Kingdom");
           setPostalCode("W8 4EP");
           setPreferredCurrency("GBP");
+          setReservations([]);
         }
       } finally {
         if (isMounted) setLoading(false);
@@ -227,7 +248,9 @@ export default function GuestAccountPage() {
         throw new Error(data.error || "Failed to update profile");
       }
 
-      setSaveSuccess("Guest profile, contact details, and payment preferences saved successfully!");
+      setSaveSuccess(
+        "Guest profile, contact details, and payment preferences saved successfully!"
+      );
       setTimeout(() => setSaveSuccess(null), 4000);
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Error saving profile");
@@ -252,6 +275,63 @@ export default function GuestAccountPage() {
     }
   };
 
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayKey = today.toISOString().slice(0, 10);
+  const upcomingReservations = reservations.filter(
+    (reservation) =>
+      reservation.status === "UPCOMING" &&
+      reservation.checkInDate.slice(0, 10) >= todayKey
+  );
+  const inHouseReservations = reservations.filter(
+    (reservation) => reservation.status === "CHECKED_IN"
+  );
+  const historyReservations = reservations.filter(
+    (reservation) =>
+      !upcomingReservations.includes(reservation) &&
+      !inHouseReservations.includes(reservation)
+  );
+
+  async function sendReservationRequest() {
+    if (!requestTarget) return;
+    setRequestSending(true);
+    setRequestError("");
+    setRequestSuccess("");
+    try {
+      const response = await fetch(
+        `/api/account/reservations/${encodeURIComponent(requestTarget.reservation.id)}/requests`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: requestTarget.type,
+            message: requestNote,
+          }),
+        }
+      );
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Could not send request.");
+
+      const successMessage = result.message || "Your request has been sent.";
+      setRequestSuccess(successMessage);
+      if (requestTarget.type === "CANCELLATION") {
+        setReservations((current) =>
+          current.map((reservation) =>
+            reservation.id === requestTarget.reservation.id
+              ? { ...reservation, cancellationRequested: true }
+              : reservation
+          )
+        );
+      }
+      setRequestTarget(null);
+      setRequestNote("");
+    } catch (error) {
+      setRequestError(error instanceof Error ? error.message : "Could not send request.");
+    } finally {
+      setRequestSending(false);
+    }
+  }
+
   return (
     <div className="container mx-auto max-w-5xl px-4 py-10 sm:px-8">
       {/* Account Hero Banner */}
@@ -268,11 +348,11 @@ export default function GuestAccountPage() {
               <Badge variant="default" className="text-xs">
                 {user?.role || "GUEST"}
               </Badge>
-              <Badge variant="outline" className="text-xs border-accent/40 text-accent">
+              <Badge variant="outline" className="border-accent/40 text-xs text-accent">
                 Vabbot Club Member
               </Badge>
             </div>
-            <p className="text-xs text-muted-foreground mt-0.5">
+            <p className="mt-0.5 text-xs text-muted-foreground">
               {email || "guest@example.com"} • Preferred: {preferredCurrency} (£ GBP)
             </p>
           </div>
@@ -303,7 +383,7 @@ export default function GuestAccountPage() {
       )}
 
       {saveError && (
-        <div className="mt-6 flex items-center gap-2 rounded-lg border border-destructive/20 bg-destructive/10 p-3.5 text-xs text-destructive">
+        <div className="border-destructive/20 bg-destructive/10 mt-6 flex items-center gap-2 rounded-lg border p-3.5 text-xs text-destructive">
           <AlertCircle className="h-4 w-4 shrink-0" />
           <span>{saveError}</span>
         </div>
@@ -312,9 +392,9 @@ export default function GuestAccountPage() {
       {/* Account Tabs */}
       <div className="mt-8">
         <Tabs defaultValue="history">
-          <TabsList className="mb-6 grid w-full grid-cols-3 max-w-xl">
+          <TabsList className="mb-6 grid w-full max-w-xl grid-cols-3">
             <TabsTrigger value="history" className="text-xs">
-              Stay History &amp; Folios
+              Stays &amp; Reservations
             </TabsTrigger>
             <TabsTrigger value="personal" className="text-xs">
               Personal &amp; Contact
@@ -329,110 +409,313 @@ export default function GuestAccountPage() {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-serif text-lg font-bold text-foreground">
-                  Your Vabbot Resorts Itinerary
+                  My Stays &amp; Reservations
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  Verified bookings, room check-in credentials, and downloadable receipts.
+                  Review upcoming getaways, active stays, and your completed reservations.
                 </p>
               </div>
               <Badge variant="outline" className="text-xs">
-                {reservations.length} Active Reservation(s)
+                {reservations.length} total
               </Badge>
             </div>
 
-            {reservations.map((res) => (
-              <Card key={res.id} className="border-border shadow-md overflow-hidden">
-                <CardHeader className="bg-muted/30 pb-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center space-x-2">
-                      {getStatusBadge(res.status)}
-                      <span className="font-mono text-xs font-bold text-foreground">
-                        #{res.referenceCode}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <ShieldCheck className="h-4 w-4 text-emerald-600" />
-                      <span>Guest ID Verified</span>
-                    </div>
-                  </div>
-                  <CardTitle className="mt-2 font-serif text-xl text-primary">
-                    {res.property?.name || "Lake Haven Luxury Resort & Lodge"}
-                  </CardTitle>
-                  <CardDescription className="flex items-center gap-1.5 text-xs">
-                    <MapPin className="h-3.5 w-3.5 text-accent" />
-                    {res.property?.address || "Lakeside Drive, Lake District"}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="grid grid-cols-1 gap-4 pt-4 sm:grid-cols-4 border-t border-border">
-                  <div className="flex items-start space-x-3 text-xs">
-                    <Calendar className="h-4 w-4 text-accent shrink-0 mt-0.5" />
-                    <div>
-                      <span className="block text-muted-foreground">Check-in / Check-out</span>
-                      <strong className="text-foreground">
-                        Nov 14 - Nov 17, 2026
-                      </strong>
-                      <span className="block text-xs text-muted-foreground">
-                        3 Nights • 2 Adults
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start space-x-3 text-xs">
-                    <BedDouble className="h-4 w-4 text-accent shrink-0 mt-0.5" />
-                    <div>
-                      <span className="block text-muted-foreground">Suite / Allocation</span>
-                      <strong className="text-foreground">
-                        {res.roomCategory?.name || "Executive Lakeview Suite"}
-                      </strong>
-                      <span className="block font-mono text-xs text-muted-foreground">
-                        Allocated: {res.roomUnit?.name || res.roomUnit?.unitNumber || "Suite 101"}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start space-x-3 text-xs">
-                    <Coins className="h-4 w-4 text-accent shrink-0 mt-0.5" />
-                    <div>
-                      <span className="block text-muted-foreground">Total Folio</span>
-                      <strong className="text-sm font-bold text-primary">
-                        £275.00
-                      </strong>
-                      <span className="block text-xs text-muted-foreground">
-                        (£{(res.totalAmount / 100).toLocaleString()})
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-end">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-1.5 text-xs w-full sm:w-auto"
-                      onClick={() => alert(`Folio receipt #${res.referenceCode} generated and ready for print.`)}
-                    >
-                      <Receipt className="h-3.5 w-3.5 text-accent" />
-                      Download Folio
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-
-            {/* Placeholder state for past stays */}
-            <div className="rounded-xl border border-dashed border-border p-8 text-center bg-card/40">
-              <Sparkles className="mx-auto mb-2.5 h-8 w-8 text-accent/80" />
-              <p className="text-sm font-semibold text-foreground">
-                Plan Your Next African Lakeside or Safari Escape
+            {requestSuccess && (
+              <p
+                role="status"
+                className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs text-emerald-800"
+              >
+                {requestSuccess}
               </p>
-              <p className="mt-1 text-xs text-muted-foreground max-w-md mx-auto">
-                Members of Vabbot Resorts enjoy tailored private game drives, sunset yacht charters, and priority room allocations.
-              </p>
-              <Link href="/">
-                <Button size="sm" className="mt-4 bg-primary text-xs">
-                  Discover Featured Sanctuaries →
-                </Button>
-              </Link>
-            </div>
+            )}
+
+            <Tabs defaultValue="upcoming">
+              <TabsList className="mb-5 flex h-auto w-full flex-wrap justify-start gap-1 sm:w-fit">
+                <TabsTrigger value="upcoming" className="gap-2 text-xs">
+                  Upcoming Stays{" "}
+                  <Badge
+                    variant="secondary"
+                    className="h-5 min-h-0 px-1.5 py-0 text-[10px]"
+                  >
+                    {upcomingReservations.length}
+                  </Badge>
+                </TabsTrigger>
+                <TabsTrigger value="in-house" className="gap-2 text-xs">
+                  Active In-House{" "}
+                  <Badge
+                    variant="secondary"
+                    className="h-5 min-h-0 px-1.5 py-0 text-[10px]"
+                  >
+                    {inHouseReservations.length}
+                  </Badge>
+                </TabsTrigger>
+                <TabsTrigger value="history" className="gap-2 text-xs">
+                  Stay History{" "}
+                  <Badge
+                    variant="secondary"
+                    className="h-5 min-h-0 px-1.5 py-0 text-[10px]"
+                  >
+                    {historyReservations.length}
+                  </Badge>
+                </TabsTrigger>
+              </TabsList>
+
+              {[
+                {
+                  value: "upcoming",
+                  items: upcomingReservations,
+                  empty: "No upcoming stays yet.",
+                },
+                {
+                  value: "in-house",
+                  items: inHouseReservations,
+                  empty: "You have no active in-house stays.",
+                },
+                {
+                  value: "history",
+                  items: historyReservations,
+                  empty: "Completed and cancelled stays will appear here.",
+                },
+              ].map(({ value, items, empty }) => (
+                <TabsContent key={value} value={value} className="space-y-4">
+                  {loading ? (
+                    <Card>
+                      <CardContent className="py-12 text-center text-sm text-muted-foreground">
+                        Loading your reservations…
+                      </CardContent>
+                    </Card>
+                  ) : items.length ? (
+                    items.map((res) => {
+                      const total = Number(res.totalAmount);
+                      const paid = (res.payments || [])
+                        .filter((payment) => payment.status === "COMPLETED")
+                        .reduce((sum, payment) => sum + Number(payment.amount), 0);
+                      const outstanding = Math.max(0, total - paid);
+                      const invoice = res.invoices?.[0];
+                      const propertyAddress = [res.property?.address, res.property?.city]
+                        .filter(Boolean)
+                        .join(", ");
+                      const canRequestChange =
+                        res.status === "UPCOMING" &&
+                        res.checkInDate.slice(0, 10) >= todayKey;
+
+                      return (
+                        <Card
+                          key={res.id}
+                          className="overflow-hidden border-slate-200 bg-white shadow-sm"
+                        >
+                          <CardHeader className="pb-3">
+                            <div className="flex flex-wrap items-start justify-between gap-3">
+                              <div>
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <CardTitle className="text-base font-bold">
+                                    {res.property?.name || "Your stay"}
+                                  </CardTitle>
+                                  {getStatusBadge(res.status)}
+                                  {res.cancellationRequested && (
+                                    <Badge variant="warning">
+                                      Cancellation requested
+                                    </Badge>
+                                  )}
+                                </div>
+                                <p className="mt-1 text-[11px] text-muted-foreground">
+                                  Ref:{" "}
+                                  <span className="font-mono font-semibold text-foreground">
+                                    #{res.referenceCode}
+                                  </span>
+                                  <span className="mx-2">·</span>
+                                  Booked{" "}
+                                  {res.createdAt ? dateOnlyLabel(res.createdAt) : "—"}
+                                </p>
+                              </div>
+                              {res.property?.contactEmail ? (
+                                <a
+                                  href={`mailto:${res.property.contactEmail}?subject=${encodeURIComponent(`Question about reservation ${res.referenceCode}`)}`}
+                                  className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border px-3 text-xs font-medium hover:bg-muted"
+                                >
+                                  <MessageSquare className="h-3.5 w-3.5 text-emerald-700" />
+                                  Message Host
+                                </a>
+                              ) : res.property?.contactPhone ? (
+                                <a
+                                  href={`tel:${res.property.contactPhone}`}
+                                  className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border px-3 text-xs font-medium hover:bg-muted"
+                                >
+                                  <Phone className="h-3.5 w-3.5 text-emerald-700" />
+                                  Call Host
+                                </a>
+                              ) : null}
+                            </div>
+                          </CardHeader>
+
+                          <CardContent className="space-y-4 border-t border-border pt-4">
+                            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                              <div>
+                                <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                                  Physical location
+                                </p>
+                                <p className="mt-1 text-xs font-semibold text-foreground">
+                                  {propertyAddress ||
+                                    res.property?.city ||
+                                    "Location not provided"}
+                                </p>
+                                {propertyAddress && (
+                                  <a
+                                    className="mt-1 inline-flex items-center gap-1 text-[10px] font-medium text-emerald-800 hover:underline"
+                                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(propertyAddress)}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                  >
+                                    <MapPin className="h-3 w-3" /> View map{" "}
+                                    <ExternalLink className="h-2.5 w-2.5" />
+                                  </a>
+                                )}
+                              </div>
+                              <div>
+                                <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                                  Dates &amp; allocation
+                                </p>
+                                <p className="mt-1 text-xs font-semibold text-foreground">
+                                  {dateOnlyLabel(res.checkInDate)} –{" "}
+                                  {dateOnlyLabel(res.checkOutDate)}
+                                </p>
+                                <p className="text-[10px] text-muted-foreground">
+                                  {reservationNights(res)} nights
+                                  {res.roomUnit?.name
+                                    ? ` · Unit ${res.roomUnit.name}`
+                                    : ""}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                                  Room category
+                                </p>
+                                <p className="mt-1 text-xs font-semibold text-foreground">
+                                  {res.roomCategory?.name || "Room"}
+                                </p>
+                                <p className="text-[10px] text-muted-foreground">
+                                  {res.adultsCount}{" "}
+                                  {res.adultsCount === 1 ? "adult" : "adults"}
+                                  {res.childrenCount
+                                    ? ` · ${res.childrenCount} ${res.childrenCount === 1 ? "child" : "children"}`
+                                    : ""}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                                  Payment folio
+                                </p>
+                                <p className="mt-1 text-xs font-bold text-foreground">
+                                  {new Intl.NumberFormat(undefined, {
+                                    style: "currency",
+                                    currency: res.currency,
+                                  }).format(total)}
+                                </p>
+                                <p
+                                  className={`text-[10px] font-medium ${outstanding > 0 ? "text-amber-700" : "text-emerald-700"}`}
+                                >
+                                  {paid > 0
+                                    ? `Paid: ${new Intl.NumberFormat(undefined, { style: "currency", currency: res.currency }).format(paid)}${outstanding > 0 ? ` · Balance: ${new Intl.NumberFormat(undefined, { style: "currency", currency: res.currency }).format(outstanding)}` : ""}`
+                                    : "No payment recorded"}
+                                </p>
+                              </div>
+                            </div>
+
+                            {(res.status === "UPCOMING" || res.specialRequests) && (
+                              <div className="flex gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-[11px] leading-relaxed text-slate-700">
+                                <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-700" />
+                                <p>
+                                  <strong className="mr-1">Check-in instructions:</strong>
+                                  {res.status === "UPCOMING"
+                                    ? `Check-in starts at ${res.property?.checkInTime || "the property's published check-in time"}. Present a government-issued photo ID and quote reference #${res.referenceCode}.`
+                                    : "Your stay preferences and notes are shown below."}
+                                  {res.specialRequests
+                                    ? ` Guest note: “${res.specialRequests}”`
+                                    : ""}
+                                </p>
+                              </div>
+                            )}
+                          </CardContent>
+
+                          <div className="flex flex-col gap-2 border-t border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                              {invoice?.pdfUrl ? (
+                                <a
+                                  href={invoice.pdfUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border px-3 text-xs font-medium hover:bg-muted"
+                                >
+                                  <Download className="h-3.5 w-3.5" /> Download invoice
+                                </a>
+                              ) : (
+                                <span className="border-border/70 inline-flex h-8 items-center gap-1.5 rounded-md border px-3 text-xs text-muted-foreground">
+                                  <Receipt className="h-3.5 w-3.5" />
+                                  {invoice
+                                    ? `Invoice ${invoice.invoiceNumber}`
+                                    : "Invoice not available"}
+                                </span>
+                              )}
+                            </div>
+                            {canRequestChange && (
+                              <div className="flex flex-wrap items-center justify-end gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="gap-1.5 text-xs"
+                                  onClick={() => {
+                                    setRequestError("");
+                                    setRequestTarget({
+                                      reservation: res,
+                                      type: "DATE_CHANGE",
+                                    });
+                                  }}
+                                >
+                                  <Pencil className="h-3.5 w-3.5" /> Modify dates
+                                </Button>
+                                {res.cancellationRequested ? (
+                                  <span className="px-2 text-xs font-medium text-amber-700">
+                                    Cancellation under review
+                                  </span>
+                                ) : (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-xs text-rose-700 hover:bg-rose-50 hover:text-rose-800"
+                                    onClick={() => {
+                                      setRequestError("");
+                                      setRequestTarget({
+                                        reservation: res,
+                                        type: "CANCELLATION",
+                                      });
+                                    }}
+                                  >
+                                    Request cancellation
+                                  </Button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </Card>
+                      );
+                    })
+                  ) : (
+                    <div className="bg-card/40 rounded-xl border border-dashed border-border p-8 text-center">
+                      <Sparkles className="text-accent/80 mx-auto mb-2.5 h-7 w-7" />
+                      <p className="text-sm font-semibold text-foreground">{empty}</p>
+                      {value === "upcoming" && (
+                        <Link
+                          href="/"
+                          className="mt-3 inline-flex text-xs font-semibold text-primary hover:underline"
+                        >
+                          Explore stays <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                        </Link>
+                      )}
+                    </div>
+                  )}
+                </TabsContent>
+              ))}
+            </Tabs>
           </TabsContent>
 
           {/* TAB 2: Personal Information & Contact Details */}
@@ -444,17 +727,18 @@ export default function GuestAccountPage() {
                     Personal Information &amp; Contact Details
                   </CardTitle>
                   <CardDescription className="text-xs">
-                    Keep your contact records and government ID details current for swift check-in at all Vabbot Resorts properties.
+                    Keep your contact records and government ID details current for swift
+                    check-in at all Vabbot Resorts properties.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-5">
                   {/* Personal details */}
                   <div className="space-y-3">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                    <h4 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
                       <User className="h-3.5 w-3.5 text-accent" />
                       Guest Identity
                     </h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <div>
                         <label className="mb-1 block text-xs font-semibold uppercase text-muted-foreground">
                           Full Legal Name
@@ -478,7 +762,7 @@ export default function GuestAccountPage() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <div>
                         <label className="mb-1 block text-xs font-semibold uppercase text-muted-foreground">
                           Nationality
@@ -511,12 +795,12 @@ export default function GuestAccountPage() {
                   </div>
 
                   {/* Contact details */}
-                  <div className="space-y-3 pt-3 border-t border-border">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                  <div className="space-y-3 border-t border-border pt-3">
+                    <h4 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
                       <Phone className="h-3.5 w-3.5 text-accent" />
                       Contact &amp; Residence Details
                     </h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <div>
                         <label className="mb-1 block text-xs font-semibold uppercase text-muted-foreground">
                           Phone Number (SMS / OTP Verified)
@@ -541,7 +825,7 @@ export default function GuestAccountPage() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                       <div className="sm:col-span-2">
                         <label className="mb-1 block text-xs font-semibold uppercase text-muted-foreground">
                           Street Address
@@ -565,7 +849,7 @@ export default function GuestAccountPage() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <div>
                         <label className="mb-1 block text-xs font-semibold uppercase text-muted-foreground">
                           County / Region
@@ -591,12 +875,12 @@ export default function GuestAccountPage() {
                   </div>
 
                   {/* Emergency contact */}
-                  <div className="space-y-3 pt-3 border-t border-border">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                  <div className="space-y-3 border-t border-border pt-3">
+                    <h4 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
                       <ShieldCheck className="h-3.5 w-3.5 text-accent" />
                       Emergency Contact
                     </h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <div>
                         <label className="mb-1 block text-xs font-semibold uppercase text-muted-foreground">
                           Emergency Contact Name
@@ -621,11 +905,11 @@ export default function GuestAccountPage() {
                     </div>
                   </div>
                 </CardContent>
-                <CardFooter className="border-t border-border bg-muted/20 flex justify-end">
+                <CardFooter className="bg-muted/20 flex justify-end border-t border-border">
                   <Button
                     type="submit"
                     disabled={saving}
-                    className="bg-primary hover:bg-primary-800 text-xs font-semibold gap-1.5"
+                    className="gap-1.5 bg-primary text-xs font-semibold hover:bg-primary-800"
                   >
                     <Save className="h-3.5 w-3.5 text-accent" />
                     {saving ? "Saving Changes..." : "Save Information"}
@@ -644,11 +928,12 @@ export default function GuestAccountPage() {
                     Payment Preferences &amp; Concierge Requests
                   </CardTitle>
                   <CardDescription className="text-xs">
-                    Configure your billing currency, preferred checkout methods, and hospitality requirements.
+                    Configure your billing currency, preferred checkout methods, and
+                    hospitality requirements.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-5">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
                       <label className="mb-1 block text-xs font-semibold uppercase text-muted-foreground">
                         Preferred Display &amp; Folio Currency
@@ -658,13 +943,16 @@ export default function GuestAccountPage() {
                         onChange={(e) => setPreferredCurrency(e.target.value)}
                         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-xs font-bold text-foreground ring-offset-background"
                       >
-                        <option value="GBP">GBP (£ - British Pound Sterling) [Recommended]</option>
+                        <option value="GBP">
+                          GBP (£ - British Pound Sterling) [Recommended]
+                        </option>
                         <option value="GBP">GBP (British Pound)</option>
                         <option value="USD">USD ($ - United States Dollar)</option>
                         <option value="EUR">EUR (€ - Euro)</option>
                       </select>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        Folios and resort add-ons will default to this currency upon reservation.
+                        Folios and resort add-ons will default to this currency upon
+                        reservation.
                       </p>
                     </div>
 
@@ -677,8 +965,12 @@ export default function GuestAccountPage() {
                         onChange={(e) => setPaymentMethodPref(e.target.value)}
                         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-xs ring-offset-background"
                       >
-                        <option value="CREDIT_CARD">Credit / Debit Card (Visa / Mastercard)</option>
-                        <option value="MOBILE_MONEY">Mobile Money (Airtel Money / TNM Mpamba)</option>
+                        <option value="CREDIT_CARD">
+                          Credit / Debit Card (Visa / Mastercard)
+                        </option>
+                        <option value="MOBILE_MONEY">
+                          Mobile Money (Airtel Money / TNM Mpamba)
+                        </option>
                         <option value="BANK_TRANSFER">Direct Bank Wire / BACS</option>
                         <option value="CASH">Pay at Property Desk (Upon Check-In)</option>
                       </select>
@@ -697,28 +989,30 @@ export default function GuestAccountPage() {
                       className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     />
                     <p className="mt-1 text-xs text-muted-foreground">
-                      These preferences are automatically forwarded to resort concierges before your arrival.
+                      These preferences are automatically forwarded to resort concierges
+                      before your arrival.
                     </p>
                   </div>
 
                   {/* Payment Protection badge */}
-                  <div className="flex items-center gap-3 rounded-lg border border-accent/20 bg-accent/5 p-3.5 text-xs">
-                    <ShieldCheck className="h-5 w-5 text-accent shrink-0" />
+                  <div className="border-accent/20 bg-accent/5 flex items-center gap-3 rounded-lg border p-3.5 text-xs">
+                    <ShieldCheck className="h-5 w-5 shrink-0 text-accent" />
                     <div>
-                      <strong className="block text-foreground font-semibold">
+                      <strong className="block font-semibold text-foreground">
                         Encrypted PCI-Compliant Guest Vault
                       </strong>
-                      <span className="text-muted-foreground text-xs">
-                        Card credentials and mobile money accounts are processed securely via tokenized payment gateways.
+                      <span className="text-xs text-muted-foreground">
+                        Card credentials and mobile money accounts are processed securely
+                        via tokenized payment gateways.
                       </span>
                     </div>
                   </div>
                 </CardContent>
-                <CardFooter className="border-t border-border bg-muted/20 flex justify-end">
+                <CardFooter className="bg-muted/20 flex justify-end border-t border-border">
                   <Button
                     type="submit"
                     disabled={saving}
-                    className="bg-primary hover:bg-primary-800 text-xs font-semibold gap-1.5"
+                    className="gap-1.5 bg-primary text-xs font-semibold hover:bg-primary-800"
                   >
                     <Save className="h-3.5 w-3.5 text-accent" />
                     {saving ? "Updating Preferences..." : "Save Payment Preferences"}
@@ -729,6 +1023,85 @@ export default function GuestAccountPage() {
           </TabsContent>
         </Tabs>
       </div>
+
+      <ModalDialog
+        open={Boolean(requestTarget)}
+        onOpenChange={(open) => {
+          if (!open && !requestSending) {
+            setRequestTarget(null);
+            setRequestError("");
+            setRequestNote("");
+          }
+        }}
+      >
+        <DialogHeader>
+          <DialogTitle>
+            {requestTarget?.type === "CANCELLATION"
+              ? "Request reservation cancellation"
+              : "Request a date change"}
+          </DialogTitle>
+          <DialogDescription>
+            {requestTarget
+              ? `${requestTarget.reservation.property?.name || "Your property"} · ${requestTarget.reservation.referenceCode}`
+              : ""}
+          </DialogDescription>
+        </DialogHeader>
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          This sends a request to the property team. Your reservation remains{" "}
+          {requestTarget?.reservation.status === "UPCOMING" ? "upcoming" : "active"} until
+          the property confirms a change.
+        </p>
+        <label className="mt-4 block text-xs font-semibold text-foreground">
+          Note for the host{" "}
+          <span className="font-normal text-muted-foreground">(optional)</span>
+          <textarea
+            rows={4}
+            maxLength={1000}
+            value={requestNote}
+            onChange={(event) => setRequestNote(event.target.value)}
+            placeholder={
+              requestTarget?.type === "CANCELLATION"
+                ? "Share why you need to cancel…"
+                : "Share the dates you would prefer…"
+            }
+            className="mt-1.5 flex w-full rounded-md border border-input bg-background px-3 py-2 text-xs font-normal ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          />
+        </label>
+        {requestError && (
+          <p
+            role="alert"
+            className="mt-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700"
+          >
+            {requestError}
+          </p>
+        )}
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={requestSending}
+            onClick={() => setRequestTarget(null)}
+          >
+            Keep reservation
+          </Button>
+          <Button
+            type="button"
+            disabled={!requestTarget || requestSending}
+            className={
+              requestTarget?.type === "CANCELLATION"
+                ? "bg-rose-700 text-white hover:bg-rose-800"
+                : "bg-emerald-800 text-white hover:bg-emerald-900"
+            }
+            onClick={() => void sendReservationRequest()}
+          >
+            {requestSending
+              ? "Sending…"
+              : requestTarget?.type === "CANCELLATION"
+                ? "Send cancellation request"
+                : "Send date-change request"}
+          </Button>
+        </DialogFooter>
+      </ModalDialog>
     </div>
   );
 }

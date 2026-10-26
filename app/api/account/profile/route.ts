@@ -31,16 +31,52 @@ export async function GET(req: NextRequest) {
 
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
-      include: {
-        guestProfile: true,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        role: true,
+        guestProfile: {
+          select: {
+            nationality: true,
+            idOrPassportNumber: true,
+            emergencyContactName: true,
+            emergencyContactPhone: true,
+            address: true,
+            city: true,
+            stateOrRegion: true,
+            postalCode: true,
+            country: true,
+            preferredCurrency: true,
+            paymentMethodPref: true,
+            specialRequests: true,
+            phone: true,
+          },
+        },
         reservations: {
-          include: {
+          select: {
+            id: true,
+            referenceCode: true,
+            status: true,
+            checkInDate: true,
+            checkOutDate: true,
+            adultsCount: true,
+            childrenCount: true,
+            totalAmount: true,
+            currency: true,
+            specialRequests: true,
+            idVerificationStatus: true,
+            createdAt: true,
             property: {
               select: {
                 id: true,
                 name: true,
                 city: true,
                 address: true,
+                contactEmail: true,
+                contactPhone: true,
+                checkInTime: true,
               },
             },
             roomCategory: {
@@ -54,7 +90,27 @@ export async function GET(req: NextRequest) {
                 name: true,
               },
             },
-            payments: true,
+            payments: {
+              select: {
+                amount: true,
+                currency: true,
+                status: true,
+                paymentType: true,
+                createdAt: true,
+              },
+              orderBy: { createdAt: "desc" },
+            },
+            invoices: {
+              select: {
+                invoiceNumber: true,
+                pdfUrl: true,
+                status: true,
+                totalAmount: true,
+                currency: true,
+                issuedAt: true,
+              },
+              orderBy: { issuedAt: "desc" },
+            },
           },
           orderBy: { createdAt: "desc" },
           take: 10,
@@ -89,18 +145,29 @@ export async function GET(req: NextRequest) {
               id: "res-demo-1",
               referenceCode: "RES-2026-8941",
               status: "UPCOMING",
-              checkIn: "2026-11-14T14:00:00Z",
-              checkOut: "2026-11-17T11:00:00Z",
-              nights: 3,
-              adults: 2,
-              children: 0,
-              totalAmount: 555000,
+              checkInDate: "2026-11-14T00:00:00.000Z",
+              checkOutDate: "2026-11-17T00:00:00.000Z",
+              adultsCount: 2,
+              childrenCount: 0,
+              totalAmount: "555.00",
               currency: "GBP",
-              totalAmountGbp: 275,
+              payments: [
+                {
+                  amount: "400.00",
+                  currency: "GBP",
+                  status: "COMPLETED",
+                  paymentType: "PARTIAL",
+                },
+              ],
+              invoices: [],
+              cancellationRequested: false,
               property: {
                 name: "Windermere Lakeside Retreat & Lodge",
                 city: "Windermere",
                 address: "Lakeside Drive, Lake District",
+                contactEmail: null,
+                contactPhone: null,
+                checkInTime: "14:00",
               },
               roomCategory: {
                 name: "Executive Lakeview Suite",
@@ -109,19 +176,50 @@ export async function GET(req: NextRequest) {
                 name: "Suite 101",
               },
               idVerificationStatus: "VERIFIED",
+              specialRequests: "High floor lake view suite, hypoallergenic bedding.",
+              createdAt: "2026-10-18T10:30:00.000Z",
             },
           ],
         },
       });
     }
 
-    return NextResponse.json({ user });
+    const reservationIds = user.reservations.map(({ id }) => id);
+    const cancellationRequests = reservationIds.length
+      ? await prisma.message.findMany({
+          where: {
+            senderId: user.id,
+            reservationId: { in: reservationIds },
+            subject: "Guest cancellation request",
+          },
+          select: { reservationId: true },
+        })
+      : [];
+    const cancellationRequested = new Set(
+      cancellationRequests.map(({ reservationId }) => reservationId)
+    );
+
+    return NextResponse.json({
+      user: {
+        ...user,
+        reservations: user.reservations.map((reservation) => ({
+          ...reservation,
+          totalAmount: reservation.totalAmount.toString(),
+          payments: reservation.payments.map((payment) => ({
+            ...payment,
+            amount: payment.amount.toString(),
+          })),
+          invoices: reservation.invoices.map((invoice) => ({
+            ...invoice,
+            totalAmount: invoice.totalAmount.toString(),
+          })),
+          cancellationRequested: cancellationRequested.has(reservation.id),
+        })),
+      },
+    });
   } catch (err) {
     console.error("Fetch profile error:", err);
-    return NextResponse.json(
-      { error: "Failed to load guest profile" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to load guest profile" }, { status: 500 });
   }
 }
 

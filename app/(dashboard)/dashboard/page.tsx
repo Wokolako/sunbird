@@ -1,14 +1,11 @@
 import Link from "next/link";
 import {
   BedDouble,
-  Users,
   TrendingUp,
   LogIn,
   LogOut,
   Sparkles,
   ArrowUpRight,
-  ShieldCheck,
-  Clock,
 } from "lucide-react";
 import {
   Card,
@@ -34,8 +31,11 @@ export default function DashboardOverviewPage() {
       {/* Top Welcome Title */}
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
+          <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-800">
+            Live operations · Front desk
+          </p>
           <h1 className="font-serif text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-            PMS Front Desk Overview
+            Operational Overview &amp; Movement
           </h1>
           <p className="text-sm text-muted-foreground">
             Windermere Lakeside Retreat & Lodge • 10 Total Units • Lake District Lakefront
@@ -117,6 +117,176 @@ export default function DashboardOverviewPage() {
         </Card>
       </div>
 
+      <section
+        aria-label="Property performance charts"
+        className="grid gap-4 lg:grid-cols-3"
+      >
+        <Card className="overflow-hidden border-emerald-100 bg-gradient-to-br from-white to-emerald-50/40 lg:col-span-2">
+          <CardHeader className="flex-row items-start justify-between space-y-0 pb-2">
+            <div>
+              <CardTitle className="text-base font-bold">
+                Weekly Occupancy Trend
+              </CardTitle>
+              <CardDescription className="mt-1 text-xs">
+                Illustrative occupancy across the last seven days
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-bold text-emerald-800">
+              <TrendingUp className="h-3 w-3" />
+              Sample trend
+            </div>
+          </CardHeader>
+          <CardContent className="pt-2">
+            <div className="h-48 w-full">
+              <svg
+                aria-label="Illustrative occupancy trend: 64, 71, 68, 79, 86, 91, and 70 percent from Monday through today"
+                className="h-full w-full"
+                role="img"
+                viewBox="0 0 340 160"
+                preserveAspectRatio="none"
+              >
+                <defs>
+                  <linearGradient id="occupancy-fill" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0%" stopColor="#10b981" stopOpacity="0.24" />
+                    <stop offset="100%" stopColor="#10b981" stopOpacity="0.01" />
+                  </linearGradient>
+                </defs>
+                {[16, 44, 72, 100, 128].map((y, index) => (
+                  <g key={y}>
+                    <line
+                      x1="34"
+                      x2="326"
+                      y1={y}
+                      y2={y}
+                      stroke="#e7eee8"
+                      strokeDasharray="3 4"
+                    />
+                    <text x="25" y={y + 3} fill="#84918a" fontSize="8" textAnchor="end">
+                      {100 - index * 25}
+                    </text>
+                  </g>
+                ))}
+                <path
+                  d="M 38 56 C 55 52 69 46 85 48 S 118 54 132 52 S 165 42 179 40 S 212 32 226 32 S 259 27 273 26 S 306 43 320 50 L 320 128 L 38 128 Z"
+                  fill="url(#occupancy-fill)"
+                />
+                <path
+                  d="M 38 56 C 55 52 69 46 85 48 S 118 54 132 52 S 165 42 179 40 S 212 32 226 32 S 259 27 273 26 S 306 43 320 50"
+                  fill="none"
+                  stroke="#047857"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2.5"
+                />
+                {(
+                  [
+                    ["Mon", 38],
+                    ["Tue", 85],
+                    ["Wed", 132],
+                    ["Thu", 179],
+                    ["Fri", 226],
+                    ["Sat", 273],
+                    ["Today", 320],
+                  ] as const
+                ).map(([day, x]) => (
+                  <text
+                    key={day}
+                    x={x}
+                    y="148"
+                    fill="#748078"
+                    fontSize="8"
+                    textAnchor="middle"
+                  >
+                    {day}
+                  </text>
+                ))}
+              </svg>
+            </div>
+            <p className="mt-1 text-[10px] text-muted-foreground">
+              Demo visualization only; connect property data for live reporting.
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-sky-100 bg-gradient-to-br from-white to-sky-50/40">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-bold">Reservation Channels</CardTitle>
+            <CardDescription className="text-xs">
+              Sample bookings shown below
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-center py-2">
+              <svg
+                aria-label="Two sample reservations: one marketplace and one front desk direct"
+                className="h-36 w-36"
+                role="img"
+                viewBox="0 0 120 120"
+              >
+                <circle
+                  cx="60"
+                  cy="60"
+                  r="44"
+                  fill="none"
+                  stroke="#e8edf0"
+                  strokeWidth="14"
+                />
+                <circle
+                  cx="60"
+                  cy="60"
+                  r="44"
+                  fill="none"
+                  stroke="#047857"
+                  strokeDasharray="138.23 138.23"
+                  strokeWidth="14"
+                  transform="rotate(-90 60 60)"
+                />
+                <circle
+                  cx="60"
+                  cy="60"
+                  r="44"
+                  fill="none"
+                  stroke="#38bdf8"
+                  strokeDasharray="138.23 138.23"
+                  strokeDashoffset="138.23"
+                  strokeWidth="14"
+                  transform="rotate(-90 60 60)"
+                />
+                <text
+                  x="60"
+                  y="57"
+                  fill="#243c34"
+                  fontSize="22"
+                  fontWeight="700"
+                  textAnchor="middle"
+                >
+                  2
+                </text>
+                <text x="60" y="72" fill="#748078" fontSize="8" textAnchor="middle">
+                  SAMPLE
+                </text>
+              </svg>
+            </div>
+            <div className="border-border/70 space-y-2 border-t pt-3 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-2 text-muted-foreground">
+                  <span className="h-2.5 w-2.5 rounded-full bg-emerald-700" />
+                  Marketplace
+                </span>
+                <span className="font-semibold text-foreground">1 booking</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-2 text-muted-foreground">
+                  <span className="h-2.5 w-2.5 rounded-full bg-sky-400" />
+                  Front desk direct
+                </span>
+                <span className="font-semibold text-foreground">1 booking</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+
       {/* Room Status Visual Grid */}
       <Card>
         <CardHeader>
@@ -181,9 +351,7 @@ export default function DashboardOverviewPage() {
               <span className="block text-xs font-medium text-emerald-800">
                 Vacant Ready
               </span>
-              <span className="block text-xs text-muted-foreground">
-                Garden Chalet
-              </span>
+              <span className="block text-xs text-muted-foreground">Garden Chalet</span>
             </div>
 
             <div className="bg-destructive/10 rounded-lg border border-border p-3 text-center">
@@ -196,9 +364,7 @@ export default function DashboardOverviewPage() {
               <span className="block text-xs font-medium text-destructive">
                 A/C Servicing
               </span>
-              <span className="block text-xs text-muted-foreground">
-                Garden Chalet
-              </span>
+              <span className="block text-xs text-muted-foreground">Garden Chalet</span>
             </div>
           </div>
         </CardContent>

@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "backend:dev": "tsx backend/server.ts",
     "lint": "eslint app components hooks lib middleware.ts tests --ext .ts,.tsx",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

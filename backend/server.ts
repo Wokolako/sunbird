@@ -1,9 +1,7 @@
 import { createServer } from "node:http";
 import { config } from "./config";
-import { database } from "./database";
 import { route } from "./routes/api.routes";
 
-database();
 const server = createServer(async (request, response) => {
   response.setHeader("Access-Control-Allow-Origin", config.allowedOrigin);
   response.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");

@@ -1,7 +1,25 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Building2, CalendarDays, FileCheck2, Plus, RefreshCw } from "lucide-react";
+import { SignInButton, SignUpButton, UserButton, useAuth } from "@clerk/nextjs";
+import {
+  BedDouble,
+  Building2,
+  CalendarDays,
+  ChevronRight,
+  ClipboardCheck,
+  FileCheck2,
+  MessageSquare,
+  Plus,
+  RefreshCw,
+  Wrench,
+  Tags,
+  UserCog,
+  BarChart3,
+  WalletCards,
+  Users,
+} from "lucide-react";
+import { ManagerPmsPanels } from "./ManagerPmsPanels";
 
 type RecordObject = Record<string, any>;
 type ManagerState = {
@@ -12,14 +30,47 @@ type ManagerState = {
   documents: RecordObject[];
   enquiries: RecordObject[];
   bookings: RecordObject[];
+  finance: RecordObject;
 };
+type ManagerTab = "overview" | "properties" | "calendar" | "inbox" | "guests" | "operations" | "rates" | "team" | "reports" | "finance";
+
+const managerTabs: Array<{
+  id: ManagerTab;
+  label: string;
+  icon: typeof Building2;
+}> = [
+  { id: "overview", label: "Today", icon: ClipboardCheck },
+  { id: "calendar", label: "Availability", icon: CalendarDays },
+  { id: "guests", label: "Reservations", icon: Users },
+  { id: "properties", label: "Properties", icon: Building2 },
+  { id: "inbox", label: "Inbox", icon: MessageSquare },
+  { id: "operations", label: "Operations", icon: Wrench },
+  { id: "rates", label: "Rates", icon: Tags },
+  { id: "team", label: "Team", icon: UserCog },
+  { id: "reports", label: "Reports", icon: BarChart3 },
+  { id: "finance", label: "Finance", icon: WalletCards },
+];
 
 async function send(payload: RecordObject | FormData) {
-  const response = await fetch("/api/platform", {
+  let requestBody: RecordObject = payload as RecordObject;
+  if (payload instanceof FormData) {
+    const file = payload.get("file");
+    if (!(file instanceof File)) throw new Error("Choose a document to upload.");
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    let binary = "";
+    for (const byte of bytes) binary += String.fromCharCode(byte);
+    requestBody = {
+      action: "upload-document",
+      kind: payload.get("kind"),
+      filename: file.name,
+      mime: file.type,
+      base64: btoa(binary),
+    };
+  }
+  const response = await fetch("/api/backend/api/platform", {
     method: "POST",
-    headers:
-      payload instanceof FormData ? undefined : { "Content-Type": "application/json" },
-    body: payload instanceof FormData ? payload : JSON.stringify(payload),
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(requestBody),
   });
   const result = await response.json();
   if (!response.ok)
@@ -28,39 +79,50 @@ async function send(payload: RecordObject | FormData) {
 }
 
 export function ManagerApp() {
+  const { isLoaded, isSignedIn } = useAuth();
   const [state, setState] = useState<ManagerState | null>(null);
   const [session, setSession] = useState<RecordObject | null>(null);
   const [loading, setLoading] = useState(true);
-  const [mode, setMode] = useState<"register" | "login">("login");
-  const [tab, setTab] = useState<
-    "overview" | "properties" | "calendar" | "inbox" | "guests"
-  >("overview");
+  const [tab, setTab] = useState<ManagerTab>("overview");
   const [selected, setSelected] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
-    const sessionResponse = await fetch("/api/platform?view=session", {
-      cache: "no-store",
-    });
-    const sessionData = await sessionResponse.json();
-    setSession(sessionData.user);
-    if (sessionData.user?.role === "owner") {
-      const response = await fetch("/api/platform?view=mine", { cache: "no-store" });
-      if (response.ok) {
+    try {
+      setError("");
+      const sessionResponse = await fetch("/api/backend/api/platform?view=session", {
+        cache: "no-store",
+      });
+      if (!sessionResponse.ok) throw new Error("Could not load your session.");
+      const sessionData = await sessionResponse.json();
+      setSession(sessionData.user);
+      if (sessionData.user?.role === "owner") {
+        const response = await fetch("/api/backend/api/platform?view=mine", {
+          cache: "no-store",
+        });
+        if (!response.ok) throw new Error("Could not load your hotel workspace.");
         const data = await response.json();
         setState(data);
         setSelected((current) => current || data.properties[0]?.id || "");
-      }
-    } else setState(null);
-    setLoading(false);
+      } else setState(null);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Please try again.");
+    } finally {
+      setLoading(false);
+    }
   }, []);
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).get("mode") === "register")
-      setMode("register");
+    if (!isLoaded) return;
+    if (!isSignedIn) {
+      setSession(null);
+      setState(null);
+      setLoading(false);
+      return;
+    }
     void load();
-  }, [load]);
+  }, [isLoaded, isSignedIn, load]);
 
   async function act(payload: RecordObject | FormData, success: string) {
     setBusy(true);
@@ -84,124 +146,43 @@ export function ManagerApp() {
   const property = state?.properties.find((item) => item.id === selected);
   const propertyRooms =
     state?.rooms.filter((room) => room.property_id === selected) || [];
+  const today = new Date().toISOString().slice(0, 10);
+  const arrivals =
+    state?.bookings?.filter(
+      (booking) => booking.check_in === today && booking.status === "confirmed"
+    ) || [];
+  const departures =
+    state?.bookings?.filter(
+      (booking) => booking.check_out === today && booking.status === "checked_in"
+    ) || [];
+  const inHouse =
+    state?.bookings?.filter((booking) => booking.status === "checked_in") || [];
+  const pending =
+    state?.bookings?.filter((booking) => booking.status === "pending") || [];
 
-  if (loading)
+  if (!isLoaded || loading)
     return (
       <div className="card" role="status">
         Loading your workspace…
       </div>
     );
-  if (!session)
+  if (!isSignedIn)
     return (
       <div className="grid-2" style={{ paddingBottom: 90, alignItems: "start" }}>
         <div className="card">
-          <div className="tabs">
-            <button
-              className={mode === "register" ? "active" : ""}
-              onClick={() => setMode("register")}
-            >
-              Register an organisation
-            </button>
-            <button
-              className={mode === "login" ? "active" : ""}
-              onClick={() => setMode("login")}
-            >
-              Sign in
-            </button>
+          <h2>Open your property workspace</h2>
+          <p>
+            Sign in securely with Clerk, or create an account before registering your
+            hotel organisation.
+          </p>
+          <div className="form-actions">
+            <SignInButton mode="modal">
+              <button className="button">Sign in</button>
+            </SignInButton>
+            <SignUpButton mode="modal">
+              <button className="button secondary">Create account</button>
+            </SignUpButton>
           </div>
-          {mode === "register" ? (
-            <form
-              onSubmit={(event) => {
-                const values = formValues(event);
-                void act(
-                  { action: "register-owner", ...values },
-                  "Organisation created. Upload documents to start verification."
-                );
-              }}
-            >
-              <div className="form-grid">
-                <label className="field">
-                  Your name
-                  <input name="name" required />
-                </label>
-                <label className="field">
-                  Email
-                  <input name="email" type="email" required />
-                </label>
-                <label className="field">
-                  Phone
-                  <input name="phone" type="tel" required />
-                </label>
-                <label className="field">
-                  Password (12+ characters)
-                  <input name="password" type="password" minLength={12} required />
-                </label>
-                <label className="field">
-                  Organisation name
-                  <input name="organisationName" required />
-                </label>
-                <label className="field">
-                  Organisation type
-                  <select name="organisationType">
-                    <option value="hotel">Hotel</option>
-                    <option value="lodge">Lodge</option>
-                    <option value="guesthouse">Guesthouse</option>
-                    <option value="short_term_let">Short-term let</option>
-                  </select>
-                </label>
-                <label className="field">
-                  Business registration number
-                  <input name="registrationNumber" required />
-                </label>
-                <label className="field">
-                  Accommodation licence (if applicable)
-                  <input name="licenceNumber" />
-                </label>
-                <label className="field full">
-                  Business address
-                  <input name="address" required />
-                </label>
-              </div>
-              <div className="form-actions">
-                <button className="button" disabled={busy}>
-                  Create organisation
-                </button>
-              </div>
-            </form>
-          ) : (
-            <form
-              onSubmit={(event) => {
-                const values = formValues(event);
-                void act({ action: "login", ...values }, "Signed in.");
-              }}
-            >
-              <div className="form-grid">
-                <label className="field full">
-                  Email
-                  <input name="email" type="email" required />
-                </label>
-                <label className="field full">
-                  Password
-                  <input name="password" type="password" required />
-                </label>
-              </div>
-              <div className="form-actions">
-                <button className="button" disabled={busy}>
-                  Sign in
-                </button>
-              </div>
-            </form>
-          )}
-          {error && (
-            <p role="alert" className="status error" style={{ marginTop: 18 }}>
-              {error}
-            </p>
-          )}
-          {message && (
-            <p role="status" className="status" style={{ marginTop: 18 }}>
-              {message}
-            </p>
-          )}
         </div>
         <aside className="stack">
           <div className="card">
@@ -227,17 +208,94 @@ export function ManagerApp() {
         </aside>
       </div>
     );
+  if (!session)
+    return (
+      <div className="card" style={{ marginBottom: 80 }}>
+        <p className="status error" role="alert">
+          {error || "Your Clerk account could not be connected to the Vabbot backend."}
+        </p>
+        <button className="button secondary" onClick={() => void load()}>
+          Try again
+        </button>
+      </div>
+    );
   if (session.role !== "owner")
     return (
-      <div className="notice" style={{ marginBottom: 80 }}>
-        This workspace is for hotel managers only.
+      <div className="grid-2" style={{ paddingBottom: 90, alignItems: "start" }}>
+        <div className="card">
+          <h2>Register your hotel organisation</h2>
+          <p>
+            Your Clerk account is ready. Add the business details used for verification.
+          </p>
+          <form
+            onSubmit={(event) => {
+              const values = formValues(event);
+              void act(
+                { action: "onboard-owner", ...values },
+                "Organisation created. Upload documents to start verification."
+              );
+            }}
+          >
+            <div className="form-grid">
+              <label className="field">
+                Organisation name
+                <input name="organisationName" required />
+              </label>
+              <label className="field">
+                Organisation type
+                <select name="organisationType">
+                  <option value="hotel">Hotel</option>
+                  <option value="lodge">Lodge</option>
+                  <option value="guesthouse">Guesthouse</option>
+                  <option value="short_term_let">Short-term let</option>
+                </select>
+              </label>
+              <label className="field">
+                Business registration number
+                <input name="registrationNumber" required />
+              </label>
+              <label className="field">
+                Accommodation licence (if applicable)
+                <input name="licenceNumber" />
+              </label>
+              <label className="field">
+                Business phone
+                <input name="phone" type="tel" required />
+              </label>
+              <label className="field full">
+                Business address
+                <input name="address" required />
+              </label>
+            </div>
+            <div className="form-actions">
+              <button className="button" disabled={busy}>
+                Create organisation
+              </button>
+              <UserButton />
+            </div>
+          </form>
+          {error && (
+            <p className="status error" role="alert">
+              {error}
+            </p>
+          )}
+        </div>
+        <aside className="card">
+          <FileCheck2 size={24} />
+          <h3>Verification comes next</h3>
+          <p>
+            After registration, upload business registration, proof of address, and owner
+            identification. Properties stay private until approval.
+          </p>
+        </aside>
       </div>
     );
 
   return (
-    <div style={{ paddingBottom: 90 }}>
-      <div className="toolbar">
+    <div className="manager-workspace">
+      <div className="toolbar manager-accountbar">
         <div>
+          <span className="manager-account-label">Property workspace</span>
           <strong>{state?.organisation?.name}</strong>
           <span
             style={{ marginLeft: 10 }}
@@ -248,65 +306,91 @@ export function ManagerApp() {
             {state?.organisation?.status?.replace("_", " ")}
           </span>
         </div>
-        <button
-          className="button ghost small"
-          onClick={() => void act({ action: "logout" }, "Signed out.")}
-          disabled={busy}
-        >
-          Sign out
-        </button>
+        <UserButton />
       </div>
-      <div className="notice">
-        Your organisation needs administrator approval before publishing. Stay requests
-        collect no online payment. You can only manage properties belonging to your
-        organisation.
-      </div>
+      {state?.organisation?.status !== "approved" ? (
+        <div className="notice manager-notice">
+          <FileCheck2 size={20} />
+          <div>
+            <strong>Complete verification to publish properties.</strong>
+            <span>
+              Upload the required organisation documents. An administrator will review
+              them before your listings become visible to guests.
+            </span>
+          </div>
+        </div>
+      ) : (
+        <div className="status manager-notice">
+          <FileCheck2 size={20} />
+          <div>
+            <strong>Your organisation is approved.</strong>
+            <span>
+              Published properties can appear in guest search when rooms are available.
+            </span>
+          </div>
+        </div>
+      )}
       <div className="metric-grid">
         <div className="metric">
-          <span>My listings</span>
+          <span>
+            <Building2 size={16} /> Properties
+          </span>
           <strong>{state?.properties.length || 0}</strong>
-          <small>All your hotels and houses</small>
+          <small>
+            {state?.properties.filter((p) => p.status === "published").length || 0}{" "}
+            published
+          </small>
         </div>
         <div className="metric">
-          <span>Published listings</span>
-          <strong>
-            {state?.properties.filter((p) => p.status === "published").length || 0}
-          </strong>
-          <small>Visible to guests</small>
+          <span>
+            <CalendarDays size={16} /> Arrivals today
+          </span>
+          <strong>{arrivals.length}</strong>
+          <small>{arrivals.length ? "Guests expected" : "No arrivals scheduled"}</small>
         </div>
         <div className="metric">
-          <span>Current guests</span>
-          <strong>
-            {state?.bookings
-              ?.filter((b) => b.status === "checked_in")
-              .reduce((n, b) => n + b.guests, 0) || 0}
-          </strong>
-          <small>Guests checked in</small>
+          <span>
+            <BedDouble size={16} /> In house
+          </span>
+          <strong>{inHouse.reduce((total, booking) => total + booking.guests, 0)}</strong>
+          <small>
+            {inHouse.length} active stay{inHouse.length === 1 ? "" : "s"}
+          </small>
         </div>
         <div className="metric">
-          <span>Pending requests</span>
-          <strong>
-            {state?.bookings?.filter((b) => b.status === "pending").length || 0}
-          </strong>
-          <small>Waiting for your response</small>
+          <span>
+            <MessageSquare size={16} /> Needs attention
+          </span>
+          <strong>{pending.length}</strong>
+          <small>Pending stay request{pending.length === 1 ? "" : "s"}</small>
         </div>
       </div>
       <div className="tabs" role="tablist" aria-label="Property manager sections">
-        {(["overview", "properties", "guests", "calendar", "inbox"] as const).map(
-          (item) => (
-            <button
-              key={item}
-              role="tab"
-              aria-selected={tab === item}
-              className={tab === item ? "active" : ""}
-              onClick={() => setTab(item)}
-            >
-              {item === "calendar"
-                ? "Availability"
-                : item[0].toUpperCase() + item.slice(1)}
-            </button>
-          )
-        )}
+        {managerTabs.map(({ id, label, icon: Icon }, index) => (
+          <button
+            key={id}
+            id={`manager-tab-${id}`}
+            role="tab"
+            aria-selected={tab === id}
+            aria-controls={`manager-panel-${id}`}
+            tabIndex={tab === id ? 0 : -1}
+            className={tab === id ? "active" : ""}
+            onClick={() => setTab(id)}
+            onKeyDown={(event) => {
+              if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
+              event.preventDefault();
+              const direction = event.key === "ArrowRight" ? 1 : -1;
+              const next = (index + direction + managerTabs.length) % managerTabs.length;
+              setTab(managerTabs[next].id);
+              const buttons =
+                event.currentTarget.parentElement?.querySelectorAll("button");
+              buttons?.[next]?.focus();
+            }}
+          >
+            <Icon size={17} />
+            {label}
+          </button>
+        ))}
       </div>
       {error && (
         <p role="alert" className="status error">
@@ -320,73 +404,142 @@ export function ManagerApp() {
       )}
 
       {tab === "overview" && (
-        <div className="grid-2">
-          <div className="card">
-            <h2>Verification documents</h2>
-            <p>
-              Upload PDF, JPEG or PNG files up to 5 MB. They are available to platform
-              administrators only.
-            </p>
-            <form
-              onSubmit={(event) => {
-                event.preventDefault();
-                const data = new FormData(event.currentTarget);
-                void act(data, "Document uploaded.");
-                event.currentTarget.reset();
-              }}
-            >
-              <div className="form-grid">
-                <label className="field">
-                  Document type
-                  <select name="kind">
-                    <option value="business_registration">Business registration</option>
-                    <option value="proof_of_address">Proof of address</option>
-                    <option value="owner_id">Owner ID</option>
-                    <option value="accommodation_licence">Accommodation licence</option>
-                  </select>
-                </label>
-                <label className="field">
-                  Choose file
-                  <input name="file" type="file" accept=".pdf,.jpg,.jpeg,.png" required />
-                </label>
+        <section
+          className="manager-panel"
+          id="manager-panel-overview"
+          role="tabpanel"
+          aria-labelledby="manager-tab-overview"
+        >
+          <div className="manager-today">
+            <div className="manager-section-head">
+              <div>
+                <h2>Today at your properties</h2>
+                <p>
+                  {new Intl.DateTimeFormat("en-GB", { dateStyle: "full" }).format(
+                    new Date()
+                  )}
+                </p>
               </div>
-              <div className="form-actions">
-                <button className="button" disabled={busy}>
-                  Upload document
-                </button>
-              </div>
-            </form>
-            <ul>
-              {state?.documents.map((document) => (
-                <li key={document.id}>
-                  {document.kind.replaceAll("_", " ")} · {document.filename}
-                </li>
-              ))}
-            </ul>
+              <button className="button secondary" onClick={() => setTab("guests")}>
+                Open reservations <ChevronRight size={17} />
+              </button>
+            </div>
+            <div className="manager-task-grid">
+              <button onClick={() => setTab("guests")}>
+                <CalendarDays size={20} />
+                <span>
+                  <strong>{arrivals.length}</strong> arrivals
+                </span>
+                <small>
+                  {arrivals.length
+                    ? "Prepare rooms and welcome guests"
+                    : "No arrivals scheduled"}
+                </small>
+              </button>
+              <button onClick={() => setTab("guests")}>
+                <BedDouble size={20} />
+                <span>
+                  <strong>{departures.length}</strong> departures
+                </span>
+                <small>
+                  {departures.length
+                    ? "Check out and release rooms"
+                    : "No departures scheduled"}
+                </small>
+              </button>
+              <button onClick={() => setTab("inbox")}>
+                <MessageSquare size={20} />
+                <span>
+                  <strong>{pending.length}</strong> requests
+                </span>
+                <small>
+                  {pending.length
+                    ? "Guests are waiting for a response"
+                    : "Inbox is clear"}
+                </small>
+              </button>
+            </div>
           </div>
-          <div className="card">
-            <h2>Organisation status</h2>
-            <p>
-              Current decision:{" "}
-              <strong>{state?.organisation?.status?.replaceAll("_", " ")}</strong>
-            </p>
-            {state?.organisation?.verification_reason && (
-              <p>Admin note: {state.organisation.verification_reason}</p>
-            )}
-            <p>
-              Payout onboarding:{" "}
-              <strong>{state?.organisation?.payout_status?.replaceAll("_", " ")}</strong>
-            </p>
-            <p>
-              Provider onboarding will be connected after the licensed payment
-              partner is selected.
-            </p>
+          <div className="manager-overview-grid">
+            <div className="card manager-documents">
+              <h2>Verification documents</h2>
+              <p>
+                Upload PDF, JPEG or PNG files up to 5 MB. They are available to platform
+                administrators only.
+              </p>
+              <form
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  const data = new FormData(event.currentTarget);
+                  void act(data, "Document uploaded.");
+                  event.currentTarget.reset();
+                }}
+              >
+                <div className="form-grid">
+                  <label className="field">
+                    Document type
+                    <select name="kind">
+                      <option value="business_registration">Business registration</option>
+                      <option value="proof_of_address">Proof of address</option>
+                      <option value="owner_id">Owner ID</option>
+                      <option value="accommodation_licence">Accommodation licence</option>
+                    </select>
+                  </label>
+                  <label className="field">
+                    Choose file
+                    <input
+                      name="file"
+                      type="file"
+                      accept=".pdf,.jpg,.jpeg,.png"
+                      required
+                    />
+                  </label>
+                </div>
+                <div className="form-actions">
+                  <button className="button" disabled={busy}>
+                    Upload document
+                  </button>
+                </div>
+              </form>
+              <ul>
+                {state?.documents.map((document) => (
+                  <li key={document.id}>
+                    {document.kind.replaceAll("_", " ")} · {document.filename}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="card manager-status-card">
+              <h2>Organisation status</h2>
+              <p>
+                Current decision:{" "}
+                <strong>{state?.organisation?.status?.replaceAll("_", " ")}</strong>
+              </p>
+              {state?.organisation?.verification_reason && (
+                <p>Admin note: {state.organisation.verification_reason}</p>
+              )}
+              <p>
+                Payout onboarding:{" "}
+                <strong>
+                  {state?.organisation?.payout_status?.replaceAll("_", " ")}
+                </strong>
+              </p>
+              <p>
+                Provider onboarding will be connected after the licensed payment partner
+                is selected.
+              </p>
+            </div>
           </div>
-        </div>
+        </section>
       )}
 
       {tab === "guests" && (
-        <div className="table-wrap">
+        <section
+          className="table-wrap manager-panel"
+          id="manager-panel-guests"
+          role="tabpanel"
+          aria-labelledby="manager-tab-guests"
+        >
           <table>
             <thead>
               <tr>
@@ -455,10 +608,15 @@ export function ManagerApp() {
           {!state?.bookings?.length && (
             <p className="empty-state">No guest requests for your properties yet.</p>
           )}
-        </div>
+        </section>
       )}
       {tab === "properties" && (
-        <div className="stack">
+        <section
+          className="stack manager-panel"
+          id="manager-panel-properties"
+          role="tabpanel"
+          aria-labelledby="manager-tab-properties"
+        >
           <div className="card">
             <h2>Add a property draft</h2>
             <form
@@ -829,11 +987,16 @@ export function ManagerApp() {
               <p>No properties yet. Add your first draft above.</p>
             </div>
           )}
-        </div>
+        </section>
       )}
 
       {tab === "calendar" && (
-        <div className="card">
+        <section
+          className="card manager-panel"
+          id="manager-panel-calendar"
+          role="tabpanel"
+          aria-labelledby="manager-tab-calendar"
+        >
           <div className="card-icon">
             <CalendarDays size={24} />
           </div>
@@ -902,11 +1065,16 @@ export function ManagerApp() {
           ) : (
             <p>Add a property and room type first.</p>
           )}
-        </div>
+        </section>
       )}
 
       {tab === "inbox" && (
-        <div className="card">
+        <section
+          className="card manager-panel"
+          id="manager-panel-inbox"
+          role="tabpanel"
+          aria-labelledby="manager-tab-inbox"
+        >
           <h2>Enquiries and bookings</h2>
           <p>
             Messages and booking states will appear here. Booking requests are held back
@@ -938,7 +1106,16 @@ export function ManagerApp() {
           ) : (
             <div className="notice">No enquiries yet.</div>
           )}
-        </div>
+        </section>
+      )}
+      {(["operations", "rates", "team", "reports", "finance"] as ManagerTab[]).includes(tab) && (
+        <ManagerPmsPanels
+          section={tab as "operations" | "rates" | "team" | "reports" | "finance"}
+          propertyId={selected}
+          rooms={propertyRooms}
+          finance={state?.finance || {}}
+          refreshWorkspace={load}
+        />
       )}
     </div>
   );

@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { SignInButton, SignUpButton, useAuth } from "@clerk/nextjs";
 import { SiteHeader, SiteFooter } from "./SiteShell";
 import { money } from "@/lib/stays";
 type Booking = {
@@ -15,13 +16,16 @@ type Booking = {
   total_minor: number;
 };
 export function GuestBookings() {
+  const { isLoaded, isSignedIn } = useAuth();
   const [rows, setRows] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState("");
   async function load() {
     try {
-      const r = await fetch("/api/platform?view=bookings", { cache: "no-store" });
+      const r = await fetch("/api/backend/api/platform?view=bookings", {
+        cache: "no-store",
+      });
       const d = await r.json();
       if (!r.ok) throw Error(d.error);
       setRows(d.bookings);
@@ -32,13 +36,18 @@ export function GuestBookings() {
     }
   }
   useEffect(() => {
+    if (!isLoaded) return;
+    if (!isSignedIn) {
+      setLoading(false);
+      return;
+    }
     void load();
-  }, []);
+  }, [isLoaded, isSignedIn]);
   async function cancel(id: string) {
     setBusy(id);
     setError("");
     try {
-      const r = await fetch("/api/platform", {
+      const r = await fetch("/api/backend/api/platform", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "booking-status", id, status: "cancelled" }),
@@ -65,13 +74,25 @@ export function GuestBookings() {
             Find another stay
           </Link>
         </div>
-        {error && (
+        {!isLoaded || loading ? (
+          <p role="status">Loading your stays...</p>
+        ) : !isSignedIn ? (
+          <div className="empty-state">
+            <h2>Sign in to see your stays.</h2>
+            <p>Your booking requests are protected by your Vabbot account.</p>
+            <div className="form-actions">
+              <SignInButton mode="modal">
+                <button className="button">Sign in</button>
+              </SignInButton>
+              <SignUpButton mode="modal">
+                <button className="button secondary">Create account</button>
+              </SignUpButton>
+            </div>
+          </div>
+        ) : error ? (
           <p className="status error" role="alert">
             {error}
           </p>
-        )}
-        {loading ? (
-          <p role="status">Loading your stays...</p>
         ) : rows.length === 0 ? (
           <div className="empty-state">
             <h2>Your next story is waiting.</h2>

@@ -1,8 +1,14 @@
-import { verifyToken } from "@clerk/backend";
-import { database } from "../database";
+import { createClerkClient, verifyToken } from "@clerk/backend";
 import { config } from "../config";
+import { prisma, roleToApi } from "../data/prisma";
 
-export type AuthUser = { id: string; clerkUserId: string; name: string; email: string; role: "owner" | "admin" | "guest" };
+export type AuthUser = {
+  id: string;
+  clerkUserId: string;
+  name: string;
+  email: string;
+  role: "owner" | "admin" | "guest";
+};
 
 export async function authenticate(authorization?: string): Promise<AuthUser | null> {
   const token = authorization?.startsWith("Bearer ") ? authorization.slice(7) : "";
@@ -15,8 +21,35 @@ export async function authenticate(authorization?: string): Promise<AuthUser | n
     });
     const clerkUserId = claims.sub;
     if (!clerkUserId) return null;
-    const user = database().prepare("SELECT id,clerk_user_id,name,email,role FROM users WHERE clerk_user_id=? AND status='active'").get(clerkUserId) as { id: string; clerk_user_id: string; name: string; email: string; role: AuthUser["role"] } | undefined;
-    return user ? { id: user.id, clerkUserId: user.clerk_user_id, name: user.name, email: user.email, role: user.role } : null;
+    let user = await prisma.user.findFirst({
+      where: { clerkUserId, accountStatus: "ACTIVE" },
+    });
+    if (!user && config.clerkSecretKey) {
+      const clerk = createClerkClient({ secretKey: config.clerkSecretKey });
+      const clerkUser = await clerk.users.getUser(clerkUserId);
+      const email =
+        clerkUser.emailAddresses.find(
+          (item) => item.id === clerkUser.primaryEmailAddressId
+        )?.emailAddress || clerkUser.emailAddresses[0]?.emailAddress;
+      if (!email) return null;
+      const name =
+        [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(" ") ||
+        email.split("@")[0];
+      user = await prisma.user.upsert({
+        where: { email: email.toLowerCase() },
+        update: { clerkUserId, name },
+        create: { clerkUserId, name, email: email.toLowerCase(), role: "GUEST" },
+      });
+    }
+    return user
+      ? {
+          id: user.id,
+          clerkUserId: user.clerkUserId!,
+          name: user.name || user.email.split("@")[0],
+          email: user.email,
+          role: roleToApi(user.role),
+        }
+      : null;
   } catch {
     return null;
   }

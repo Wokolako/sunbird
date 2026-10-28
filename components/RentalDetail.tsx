@@ -1,6 +1,7 @@
 ﻿"use client";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useAuth } from "@clerk/nextjs";
 import { MapPin, Users, ArrowLeft, CheckCircle2 } from "lucide-react";
 import { SiteHeader, SiteFooter } from "./SiteShell";
 import { money, nightsBetween } from "@/lib/stays";
@@ -28,13 +29,8 @@ type Rental = {
   check_out: string;
   rooms: Room[];
 };
-export function RentalDetail({
-  property,
-  user,
-}: {
-  property: Rental;
-  user: { id: string; name: string } | null;
-}) {
+export function RentalDetail({ property }: { property: Rental }) {
+  const { isSignedIn } = useAuth();
   const [roomId, setRoomId] = useState(property.rooms[0]?.id || "");
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
@@ -44,11 +40,22 @@ export function RentalDetail({
   const [error, setError] = useState("");
   const [reference, setReference] = useState("");
   const room = property.rooms.find((r) => r.id === roomId);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const nextStart = params.get("start");
+    const nextEnd = params.get("end");
+    const nextGuests = Number(params.get("guests"));
+    const nextRooms = Number(params.get("rooms"));
+    if (nextStart) setStart(nextStart);
+    if (nextEnd) setEnd(nextEnd);
+    if (Number.isFinite(nextGuests) && nextGuests > 0) setGuests(nextGuests);
+    if (Number.isFinite(nextRooms) && nextRooms > 0) setUnits(nextRooms);
+  }, []);
   const total =
     ((room?.nightly_rate_minor || 0) / 100) * nightsBetween(start, end) * units;
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!user) {
+    if (!isSignedIn) {
       window.location.href =
         "/account?next=" + encodeURIComponent(window.location.pathname);
       return;
@@ -56,7 +63,7 @@ export function RentalDetail({
     setBusy(true);
     setError("");
     try {
-      const r = await fetch("/api/platform", {
+      const r = await fetch("/api/backend/api/platform", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -132,6 +139,7 @@ export function RentalDetail({
                     key={r.id}
                     className={r.id === roomId ? "selected" : ""}
                     onClick={() => setRoomId(r.id)}
+                    aria-pressed={r.id === roomId}
                   >
                     <Users size={22} />
                     <div>
@@ -173,7 +181,9 @@ export function RentalDetail({
             ) : (
               <>
                 <h2>Request your stay.</h2>
-                {!user && <p>Sign in or create a guest account to send your request.</p>}
+                {!isSignedIn && (
+                  <p>Sign in or create a guest account to send your request.</p>
+                )}
                 <form onSubmit={submit}>
                   <div className="stack">
                     <label className="field">
@@ -246,7 +256,7 @@ export function RentalDetail({
                     <button className="button full-width" disabled={busy || !room}>
                       {busy
                         ? "Sending..."
-                        : user
+                        : isSignedIn
                           ? "Request this stay"
                           : "Sign in to request a stay"}
                     </button>

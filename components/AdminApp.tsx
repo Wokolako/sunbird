@@ -1,5 +1,7 @@
 ﻿"use client";
-import { useEffect, useState } from "react";
+import { SignInButton, UserButton, useAuth } from "@clerk/nextjs";
+import { useCallback, useEffect, useState } from "react";
+import { AdminFinancePanel } from "./AdminFinancePanel";
 type Row = Record<string, any>;
 type Data = {
   users: Row[];
@@ -9,8 +11,10 @@ type Data = {
   bookings: Row[];
   logs: Row[];
   settings: Row[];
+  finance: Row;
 };
 export function AdminApp() {
+  const { isLoaded, isSignedIn } = useAuth();
   const [session, setSession] = useState<Row | null>(null);
   const [data, setData] = useState<Data | null>(null);
   const [loading, setLoading] = useState(true);
@@ -18,13 +22,19 @@ export function AdminApp() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
-  async function load() {
+  const load = useCallback(async () => {
     try {
-      const r = await fetch("/api/platform?view=session", { cache: "no-store" });
+      setError("");
+      const r = await fetch("/api/backend/api/platform?view=session", {
+        cache: "no-store",
+      });
       const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "Could not load your session.");
       setSession(d.user);
-      if (d.user) {
-        const response = await fetch("/api/platform?view=admin", { cache: "no-store" });
+      if (d.user?.role === "admin") {
+        const response = await fetch("/api/backend/api/platform?view=admin", {
+          cache: "no-store",
+        });
         const all = await response.json();
         if (!response.ok) throw Error(all.error);
         setData(all);
@@ -34,16 +44,23 @@ export function AdminApp() {
     } finally {
       setLoading(false);
     }
-  }
-  useEffect(() => {
-    void load();
   }, []);
+  useEffect(() => {
+    if (!isLoaded) return;
+    if (!isSignedIn) {
+      setSession(null);
+      setData(null);
+      setLoading(false);
+      return;
+    }
+    void load();
+  }, [isLoaded, isSignedIn, load]);
   async function act(payload: Row) {
     setBusy(true);
     setError("");
     setMessage("");
     try {
-      const r = await fetch("/api/platform", {
+      const r = await fetch("/api/backend/api/platform", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -63,42 +80,26 @@ export function AdminApp() {
     return (
       <div className="card" style={{ maxWidth: 520, marginBottom: 70 }}>
         <h2>Super admin sign in</h2>
-        <p>Sign in with your platform administrator account.</p>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            void act({
-              action: "login",
-              ...Object.fromEntries(new FormData(e.currentTarget)),
-            });
-          }}
-        >
-          <div className="stack">
-            <label className="field">
-              Email
-              <input name="email" type="email" autoComplete="username" required />
-            </label>
-            <label className="field">
-              Password
-              <input
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                required
-              />
-            </label>
-          </div>
-          <div className="form-actions">
-            <button className="button" disabled={busy}>
-              Sign in
-            </button>
-          </div>
-        </form>
+        <p>Use the Clerk account linked to your platform administrator profile.</p>
+        <SignInButton mode="modal">
+          <button className="button">Sign in with Clerk</button>
+        </SignInButton>
         {error && (
           <p className="status error" role="alert">
             {error}
           </p>
         )}
+      </div>
+    );
+  if (session.role !== "admin")
+    return (
+      <div className="card" style={{ maxWidth: 620, marginBottom: 70 }}>
+        <h2>Administrator access required</h2>
+        <p>
+          This Clerk account is signed in as {session.role}. Link its email to a platform
+          administrator record before using this portal.
+        </p>
+        <UserButton />
       </div>
     );
   const managers = data?.users.filter((u) => u.role === "owner") || [];
@@ -107,13 +108,7 @@ export function AdminApp() {
     <div style={{ paddingBottom: 70 }}>
       <div className="toolbar">
         <strong>{session.name} | Super administrator</strong>
-        <button
-          className="button secondary small"
-          disabled={busy}
-          onClick={() => void act({ action: "logout" })}
-        >
-          Sign out
-        </button>
+        <UserButton />
       </div>
       {error && (
         <p className="status error" role="alert">
@@ -146,6 +141,7 @@ export function AdminApp() {
           "Verification",
           "Listings",
           "Stay requests",
+          "Finance",
           "Audit log",
           "Settings",
         ].map((t) => (
@@ -250,7 +246,7 @@ export function AdminApp() {
                     <li key={d.id}>
                       <a
                         className="text-link"
-                        href={`/api/platform?view=document&id=${d.id}`}
+                        href={`/api/backend/api/platform?view=document&id=${d.id}`}
                       >
                         {d.kind.replaceAll("_", " ")}: {d.filename}
                       </a>
@@ -415,6 +411,7 @@ export function AdminApp() {
           </table>
         </div>
       )}
+      {tab === "Finance" && data && <AdminFinancePanel finance={data.finance} busy={busy} act={act} />}
       {tab === "Settings" && (
         <div className="card">
           <h2>Guest stay requests</h2>

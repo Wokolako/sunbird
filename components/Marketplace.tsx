@@ -35,6 +35,13 @@ import { SiteHeader, SiteFooter } from "./SiteShell";
 
 import { money, nightsBetween, type Stay } from "@/lib/stays";
 
+function dateFromToday(offset: number) {
+  const date = new Date();
+  date.setHours(12, 0, 0, 0);
+  date.setDate(date.getDate() + offset);
+  return date.toISOString().slice(0, 10);
+}
+
 export function Marketplace({
   resultsPage = false,
   savedPage = false,
@@ -46,30 +53,29 @@ export function Marketplace({
   const [catalogue, setCatalogue] = useState<Stay[]>([]);
   const [userId, setUserId] = useState("");
   const [fetching, setFetching] = useState(true);
-  const [start, setStart] = useState("2026-11-06");
-  const [end, setEnd] = useState("2026-11-08");
+  const [start, setStart] = useState(() => dateFromToday(14));
+  const [end, setEnd] = useState(() => dateFromToday(16));
   const [adults, setAdults] = useState(2);
   const [children, setChildren] = useState(0);
   const [ages, setAges] = useState<number[]>([]);
   const [rooms, setRooms] = useState(1);
   const [guestOpen, setGuestOpen] = useState(false);
   const [category, setCategory] = useState("All stays");
-  const [sort, setSort] = useState("recommended");
+  const [sort, setSort] = useState("price");
   const [maxPrice, setMaxPrice] = useState(1500000);
-  const [rating, setRating] = useState(false);
-  const [instant, setInstant] = useState(false);
   const [accessible, setAccessible] = useState(false);
-  const [cancel, setCancel] = useState(false);
   const [amenity, setAmenity] = useState("");
   const [filters, setFilters] = useState(false);
   const [map, setMap] = useState(false);
   const [searched, setSearched] = useState(resultsPage || savedPage);
   const [saved, setSaved] = useState<string[]>([]);
   const [notice, setNotice] = useState("");
+  const [fetchError, setFetchError] = useState("");
+  const [catalogueRequest, setCatalogueRequest] = useState(0);
   const [origin, setOrigin] = useState<{ lat: number; lng: number } | null>(null);
   const nights = nightsBetween(start, end);
   useEffect(() => {
-    fetch("/api/platform?view=session")
+    fetch("/api/backend/api/platform?view=session")
       .then((r) => r.json())
       .then((d) => {
         if (d.user) {
@@ -91,10 +97,15 @@ export function Marketplace({
       setCategory(params.get("type")!);
       setSearched(true);
     }
+    if (params.get("start")) setStart(params.get("start")!);
+    if (params.get("end")) setEnd(params.get("end")!);
+    if (params.get("guests")) setAdults(Math.max(1, Number(params.get("guests")) || 2));
+    if (params.get("rooms")) setRooms(Math.max(1, Number(params.get("rooms")) || 1));
   }, []);
   useEffect(() => {
     const controller = new AbortController();
     setFetching(true);
+    setFetchError("");
     const params = new URLSearchParams({
       view: "search",
       checkIn: start,
@@ -103,7 +114,7 @@ export function Marketplace({
       children: String(children),
       rooms: String(rooms),
     });
-    fetch("/api/platform?" + params, { signal: controller.signal })
+    fetch("/api/backend/api/platform?" + params, { signal: controller.signal })
       .then(async (r) => {
         const data = await r.json();
         if (!r.ok) throw Error(data.error);
@@ -149,13 +160,13 @@ export function Marketplace({
       )
       .catch((e) => {
         if (e.name !== "AbortError")
-          setNotice(e.message || "Could not load stays. Please reload.");
+          setFetchError(e.message || "We could not load available stays.");
       })
       .finally(() => {
         if (!controller.signal.aborted) setFetching(false);
       });
     return () => controller.abort();
-  }, [start, end, adults, children, rooms]);
+  }, [start, end, adults, children, rooms, catalogueRequest]);
   function save(id: string) {
     if (!userId) {
       window.location.href =
@@ -213,10 +224,7 @@ export function Marketplace({
             ? s.amenities.includes("Beachfront")
             : s.type === category)) &&
         s.price * nights * rooms <= maxPrice &&
-        (!rating || s.rating >= 4.8) &&
-        (!instant || s.instant) &&
         (!accessible || s.accessible) &&
-        (!cancel || s.cancellation) &&
         (!amenity || s.amenities.includes(amenity)) &&
         s.capacity * rooms >= adults + children &&
         s.rooms >= rooms
@@ -224,11 +232,9 @@ export function Marketplace({
     .sort((a, b) =>
       sort === "price"
         ? a.price - b.price
-        : sort === "rating"
-          ? b.rating - a.rating
-          : sort === "distance"
-            ? distance(a) - distance(b)
-            : b.rating - a.rating
+        : sort === "distance"
+          ? distance(a) - distance(b)
+          : a.name.localeCompare(b.name)
     );
   const stayLink = (s: Stay) =>
     `/stays/${s.id}?start=${start}&end=${end}&guests=${adults + children}&rooms=${rooms}`;
@@ -245,7 +251,7 @@ export function Marketplace({
       <SiteHeader />
       <main>
         {!resultsPage && !savedPage && (
-          <section className="escape-hero">
+          <section className="escape-hero" aria-labelledby="guest-hero-title">
             <img
               className="hero-image"
               src="/assets/photo-1473116763249-2faaef81ccda.jpg"
@@ -257,7 +263,7 @@ export function Marketplace({
               <div className="hero-location">
                 <MapPin size={14} /> Malawi, the warm heart of Africa
               </div>
-              <h1>
+              <h1 id="guest-hero-title">
                 Somewhere special.
                 <br />
                 <em>Something unforgettable.</em>
@@ -290,7 +296,7 @@ export function Marketplace({
               <p>
                 {savedPage
                   ? "A little collection of places you would love to be."
-                  : "Explore hotels, lodges and guesthouses across the Malawi."}
+                  : "Explore hotels, lodges and guesthouses across Malawi."}
               </p>
             </div>
           )}
@@ -364,6 +370,7 @@ export function Marketplace({
                 className="search-field guest-trigger"
                 type="button"
                 aria-expanded={guestOpen}
+                aria-controls="guest-room-picker"
                 onClick={() => setGuestOpen(!guestOpen)}
               >
                 <span>
@@ -374,7 +381,15 @@ export function Marketplace({
                 </strong>
               </button>
               {guestOpen && (
-                <div className="guest-popover">
+                <div
+                  className="guest-popover"
+                  id="guest-room-picker"
+                  role="group"
+                  aria-label="Choose guests and rooms"
+                  onKeyDown={(event) => {
+                    if (event.key === "Escape") setGuestOpen(false);
+                  }}
+                >
                   <label>
                     Adults
                     <input
@@ -534,30 +549,6 @@ export function Marketplace({
               <label>
                 <input
                   type="checkbox"
-                  checked={rating}
-                  onChange={(e) => setRating(e.target.checked)}
-                />{" "}
-                Rating 4.8+
-              </label>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={instant}
-                  onChange={(e) => setInstant(e.target.checked)}
-                />{" "}
-                Instant booking
-              </label>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={cancel}
-                  onChange={(e) => setCancel(e.target.checked)}
-                />{" "}
-                Free cancellation
-              </label>
-              <label>
-                <input
-                  type="checkbox"
                   checked={accessible}
                   onChange={(e) => setAccessible(e.target.checked)}
                 />{" "}
@@ -576,9 +567,6 @@ export function Marketplace({
                 className="text-link"
                 onClick={() => {
                   setMaxPrice(1500000);
-                  setRating(false);
-                  setInstant(false);
-                  setCancel(false);
                   setAccessible(false);
                   setAmenity("");
                   setCategory("All stays");
@@ -602,15 +590,39 @@ export function Marketplace({
                 value={sort}
                 onChange={(e) => setSort(e.target.value)}
               >
-                <option value="recommended">Recommended</option>
                 <option value="price">Price: low to high</option>
                 <option value="distance">Distance</option>
-                <option value="rating">Guest rating</option>
+                <option value="name">Property name</option>
               </select>
             </label>
           </div>
           {fetching ? (
-            <p role="status">Finding available stays...</p>
+            <div
+              className="stay-grid loading-grid"
+              role="status"
+              aria-label="Finding available stays"
+            >
+              {[0, 1, 2].map((item) => (
+                <div className="stay-skeleton" key={item} aria-hidden="true">
+                  <span />
+                  <i />
+                  <i />
+                </div>
+              ))}
+              <span className="sr-only">Finding available stays...</span>
+            </div>
+          ) : fetchError ? (
+            <div className="empty-state error-state" role="alert">
+              <Search size={32} />
+              <h3>We could not load stays.</h3>
+              <p>{fetchError} Check your connection and try again.</p>
+              <button
+                className="button"
+                onClick={() => setCatalogueRequest((value) => value + 1)}
+              >
+                Try again
+              </button>
+            </div>
           ) : results.length === 0 ? (
             <div className="empty-state">
               <Search size={32} />
@@ -634,10 +646,7 @@ export function Marketplace({
                   setLocation("");
                   setCategory("All stays");
                   setMaxPrice(3000000);
-                  setRating(false);
-                  setInstant(false);
                   setAccessible(false);
-                  setCancel(false);
                   setAmenity("");
                   setAdults(2);
                   setChildren(0);
@@ -724,8 +733,8 @@ export function Marketplace({
               </div>
               {map && (
                 <aside className="map-panel">
-                  <div className="map-lake">UNITED KINGDOM</div>
-                  <strong className="map-label">UK · location overview</strong>
+                  <div className="map-lake">MALAWI</div>
+                  <strong className="map-label">Malawi · location overview</strong>
                   {results.map((s, i) => (
                     <Link
                       key={s.id}

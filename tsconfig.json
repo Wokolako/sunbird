@@ -44,6 +44,7 @@
     "middleware.ts",
     "next-env.d.ts",
     "prisma/**/*.ts",
+    "scripts/**/*.ts",
     "tests/**/*.ts",
     "types/**/*.d.ts",
     ".next-test-admin/types/**/*.ts"

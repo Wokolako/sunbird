@@ -61,10 +61,17 @@ export function Marketplace({
   const [rooms, setRooms] = useState(1);
   const [guestOpen, setGuestOpen] = useState(false);
   const [category, setCategory] = useState("All stays");
-  const [sort, setSort] = useState("price");
-  const [maxPrice, setMaxPrice] = useState(1500000);
+  const [sort, setSort] = useState("price_asc");
+  const [minPrice, setMinPrice] = useState(0);
+  const [maxPrice, setMaxPrice] = useState(3000000);
   const [accessible, setAccessible] = useState(false);
-  const [amenity, setAmenity] = useState("");
+  const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
+  const [minRating, setMinRating] = useState(0);
+  const [instantOnly, setInstantOnly] = useState(false);
+  const [cancellationOnly, setCancellationOnly] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(6);
+  const [activeStay, setActiveStay] = useState<Stay | null>(null);
   const [filters, setFilters] = useState(false);
   const [map, setMap] = useState(false);
   const [searched, setSearched] = useState(resultsPage || savedPage);
@@ -101,6 +108,9 @@ export function Marketplace({
     if (params.get("end")) setEnd(params.get("end")!);
     if (params.get("guests")) setAdults(Math.max(1, Number(params.get("guests")) || 2));
     if (params.get("rooms")) setRooms(Math.max(1, Number(params.get("rooms")) || 1));
+    if (params.get("sort")) setSort(params.get("sort")!);
+    if (params.get("page")) setPage(Math.max(1, Number(params.get("page")) || 1));
+    if (params.get("pageSize")) setPageSize(Math.max(1, Number(params.get("pageSize")) || 6));
   }, []);
   useEffect(() => {
     const controller = new AbortController();
@@ -211,31 +221,103 @@ export function Marketplace({
         Math.sin(((s.lng - origin.lng) * rad) / 2) ** 2;
     return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   };
-  const results = catalogue
-    .filter(
-      (s) =>
-        (!savedPage || saved.includes(s.id)) &&
-        (!location ||
-          `${s.location} ${s.name} Malawi`
-            .toLowerCase()
-            .includes(location.toLowerCase())) &&
-        (category === "All stays" ||
-          (category === "Lakeside"
-            ? s.amenities.includes("Beachfront")
-            : s.type === category)) &&
-        s.price * nights * rooms <= maxPrice &&
-        (!accessible || s.accessible) &&
-        (!amenity || s.amenities.includes(amenity)) &&
-        s.capacity * rooms >= adults + children &&
-        s.rooms >= rooms
-    )
-    .sort((a, b) =>
-      sort === "price"
-        ? a.price - b.price
-        : sort === "distance"
-          ? distance(a) - distance(b)
-          : a.name.localeCompare(b.name)
-    );
+  const results = useMemo(() => {
+    return catalogue
+      .filter(
+        (s) =>
+          (!savedPage || saved.includes(s.id)) &&
+          (!location ||
+            `${s.location} ${s.name} Malawi UK England Keswick Windermere Lilongwe Blantyre`
+              .toLowerCase()
+              .includes(location.toLowerCase())) &&
+          (category === "All stays" ||
+            (category === "Lakeside"
+              ? s.amenities.includes("Beachfront")
+              : s.type === category)) &&
+          s.price * nights * rooms >= minPrice &&
+          s.price * nights * rooms <= maxPrice &&
+          (!accessible || s.accessible) &&
+          (selectedAmenities.length === 0 ||
+            selectedAmenities.every((a) => s.amenities.includes(a))) &&
+          (minRating === 0 || s.rating >= minRating) &&
+          (!instantOnly || s.instant) &&
+          (!cancellationOnly || s.cancellation) &&
+          s.capacity * rooms >= adults + children &&
+          s.rooms >= rooms
+      )
+      .sort((a, b) => {
+        if (sort === "price" || sort === "price_asc") return a.price - b.price;
+        if (sort === "price_desc") return b.price - a.price;
+        if (sort === "rating") return b.rating - a.rating;
+        if (sort === "distance") return distance(a) - distance(b);
+        return a.name.localeCompare(b.name);
+      });
+  }, [
+    catalogue,
+    savedPage,
+    saved,
+    location,
+    category,
+    minPrice,
+    maxPrice,
+    nights,
+    rooms,
+    accessible,
+    selectedAmenities,
+    minRating,
+    instantOnly,
+    cancellationOnly,
+    adults,
+    children,
+    sort,
+    origin,
+  ]);
+
+  const validStays = results.filter(
+    (s) => typeof s.lat === "number" && typeof s.lng === "number"
+  );
+  const mapBbox = useMemo(() => {
+    if (validStays.length === 0) {
+      return "-3.2%2C54.2%2C-2.7%2C54.7";
+    }
+    const lats = validStays.map((s) => s.lat);
+    const lngs = validStays.map((s) => s.lng);
+    const minLat = Math.min(...lats);
+    const maxLat = Math.max(...lats);
+    const minLng = Math.min(...lngs);
+    const maxLng = Math.max(...lngs);
+    const padLat = Math.max(0.02, (maxLat - minLat) * 0.2);
+    const padLng = Math.max(0.02, (maxLng - minLng) * 0.2);
+    return `${(minLng - padLng).toFixed(4)}%2C${(minLat - padLat).toFixed(4)}%2C${(maxLng + padLng).toFixed(4)}%2C${(maxLat + padLat).toFixed(4)}`;
+  }, [validStays]);
+
+  const totalResults = results.length;
+  const totalPages = Math.max(1, Math.ceil(totalResults / pageSize));
+  const currentPage = Math.min(Math.max(1, page), totalPages);
+  const startIndex = (currentPage - 1) * pageSize;
+  const paginatedResults = results.slice(startIndex, startIndex + pageSize);
+
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set("page", String(newPage));
+      url.searchParams.set("pageSize", String(pageSize));
+      window.history.replaceState({}, "", url.toString());
+    } catch {}
+    document.getElementById("stays")?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const handlePageSizeChange = (newSize: number) => {
+    setPageSize(newSize);
+    setPage(1);
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set("page", "1");
+      url.searchParams.set("pageSize", String(newSize));
+      window.history.replaceState({}, "", url.toString());
+    } catch {}
+  };
   const stayLink = (s: Stay) =>
     `/stays/${s.id}?start=${start}&end=${end}&guests=${adults + children}&rooms=${rooms}`;
   const categories = [
@@ -534,46 +616,217 @@ export function Marketplace({
             </div>
           </div>
           {filters && (
-            <div className="filters-panel">
-              <label className="field">
-                Maximum total: {money(maxPrice)}
-                <input
-                  type="range"
-                  min={50000}
-                  max={3000000}
-                  step={10000}
-                  value={maxPrice}
-                  onChange={(e) => setMaxPrice(Number(e.target.value))}
-                />
-              </label>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={accessible}
-                  onChange={(e) => setAccessible(e.target.checked)}
-                />{" "}
-                Accessible stays
-              </label>
-              <label className="field">
-                Amenities
-                <select value={amenity} onChange={(e) => setAmenity(e.target.value)}>
-                  <option value="">All amenities</option>
-                  {["Wi-Fi", "Pool", "Breakfast", "Beachfront", "Parking"].map((a) => (
-                    <option key={a}>{a}</option>
-                  ))}
-                </select>
-              </label>
-              <button
-                className="text-link"
-                onClick={() => {
-                  setMaxPrice(1500000);
-                  setAccessible(false);
-                  setAmenity("");
-                  setCategory("All stays");
+            <div
+              className="filters-panel"
+              style={{
+                display: "grid",
+                gap: 16,
+                padding: "16px 20px",
+                background: "#f8fafc",
+                borderRadius: 8,
+                border: "1px solid var(--market-line, #e2e8f0)",
+                margin: "16px 0",
+              }}
+            >
+              {/* Dual-ended price range */}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                  gap: 14,
+                  alignItems: "end",
                 }}
               >
-                Reset filters
-              </button>
+                <label className="field">
+                  <span>Min total: {money(minPrice)}</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={maxPrice}
+                    step={1000}
+                    value={minPrice}
+                    onChange={(e) => {
+                      setMinPrice(Math.max(0, Number(e.target.value)));
+                      setPage(1);
+                    }}
+                    style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid #cbd5e1" }}
+                  />
+                </label>
+                <label className="field">
+                  <span>Max total: {money(maxPrice)}</span>
+                  <input
+                    type="number"
+                    min={minPrice}
+                    max={5000000}
+                    step={1000}
+                    value={maxPrice}
+                    onChange={(e) => {
+                      setMaxPrice(Math.max(minPrice, Number(e.target.value)));
+                      setPage(1);
+                    }}
+                    style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid #cbd5e1" }}
+                  />
+                </label>
+                <label className="field">
+                  <span>Price slider ({money(maxPrice)})</span>
+                  <input
+                    type="range"
+                    min={50000}
+                    max={3000000}
+                    step={10000}
+                    value={maxPrice}
+                    onChange={(e) => {
+                      setMaxPrice(Number(e.target.value));
+                      setPage(1);
+                    }}
+                  />
+                </label>
+              </div>
+
+              {/* Guest / Star Rating Filter */}
+              <div>
+                <span style={{ fontSize: 13, fontWeight: 600, display: "block", marginBottom: 6 }}>
+                  Minimum guest rating:
+                </span>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                  {[
+                    { label: "Any rating", val: 0 },
+                    { label: "★ 3.0+", val: 3 },
+                    { label: "★ 4.0+", val: 4 },
+                    { label: "★ 4.5+", val: 4.5 },
+                  ].map((r) => (
+                    <button
+                      key={r.label}
+                      type="button"
+                      className={`button small ${minRating === r.val ? "" : "secondary"}`}
+                      onClick={() => {
+                        setMinRating(r.val);
+                        setPage(1);
+                      }}
+                      style={{ padding: "4px 10px", fontSize: 12 }}
+                    >
+                      {r.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Multi-Select Amenities Filter */}
+              <div>
+                <span style={{ fontSize: 13, fontWeight: 600, display: "block", marginBottom: 6 }}>
+                  Popular amenities:
+                </span>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {[
+                    "Wi-Fi",
+                    "Pool",
+                    "Breakfast",
+                    "Beachfront",
+                    "Parking",
+                    "Air conditioning",
+                    "Restaurant",
+                    "Spa",
+                    "Pet friendly",
+                  ].map((a) => {
+                    const isSelected = selectedAmenities.includes(a);
+                    return (
+                      <button
+                        key={a}
+                        type="button"
+                        onClick={() => {
+                          setSelectedAmenities((prev) =>
+                            isSelected ? prev.filter((item) => item !== a) : [...prev, a]
+                          );
+                          setPage(1);
+                        }}
+                        style={{
+                          padding: "4px 10px",
+                          borderRadius: 16,
+                          fontSize: 12,
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 5,
+                          background: isSelected ? "#0f766e" : "#ffffff",
+                          color: isSelected ? "#ffffff" : "#1e293b",
+                          border: isSelected ? "1px solid #0f766e" : "1px solid #cbd5e1",
+                          fontWeight: isSelected ? 600 : 400,
+                        }}
+                      >
+                        {isSelected && <Check size={12} />} {a}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Booking Options & Reset */}
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  gap: 12,
+                  paddingTop: 8,
+                  borderTop: "1px solid #e2e8f0",
+                }}
+              >
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer" }}>
+                    <input
+                      type="checkbox"
+                      checked={accessible}
+                      onChange={(e) => {
+                        setAccessible(e.target.checked);
+                        setPage(1);
+                      }}
+                    />
+                    Accessible stays
+                  </label>
+                  <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer" }}>
+                    <input
+                      type="checkbox"
+                      checked={instantOnly}
+                      onChange={(e) => {
+                        setInstantOnly(e.target.checked);
+                        setPage(1);
+                      }}
+                    />
+                    Instant booking only
+                  </label>
+                  <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer" }}>
+                    <input
+                      type="checkbox"
+                      checked={cancellationOnly}
+                      onChange={(e) => {
+                        setCancellationOnly(e.target.checked);
+                        setPage(1);
+                      }}
+                    />
+                    Free cancellation
+                  </label>
+                </div>
+
+                <button
+                  type="button"
+                  className="text-link"
+                  onClick={() => {
+                    setMinPrice(0);
+                    setMaxPrice(3000000);
+                    setAccessible(false);
+                    setSelectedAmenities([]);
+                    setMinRating(0);
+                    setInstantOnly(false);
+                    setCancellationOnly(false);
+                    setCategory("All stays");
+                    setPage(1);
+                  }}
+                  style={{ fontSize: 13 }}
+                >
+                  Reset all filters
+                </button>
+              </div>
             </div>
           )}
           {notice && (
@@ -588,11 +841,16 @@ export function Marketplace({
               <select
                 aria-label="Sort stays"
                 value={sort}
-                onChange={(e) => setSort(e.target.value)}
+                onChange={(e) => {
+                  setSort(e.target.value);
+                  setPage(1);
+                }}
               >
-                <option value="price">Price: low to high</option>
-                <option value="distance">Distance</option>
-                <option value="name">Property name</option>
+                <option value="price_asc">Price: low to high</option>
+                <option value="price_desc">Price: high to low</option>
+                <option value="rating">Top rated</option>
+                <option value="distance">Distance: nearest</option>
+                <option value="name">Property name: A to Z</option>
               </select>
             </label>
           </div>
@@ -645,13 +903,18 @@ export function Marketplace({
                   }
                   setLocation("");
                   setCategory("All stays");
+                  setMinPrice(0);
                   setMaxPrice(3000000);
                   setAccessible(false);
-                  setAmenity("");
+                  setSelectedAmenities([]);
+                  setMinRating(0);
+                  setInstantOnly(false);
+                  setCancellationOnly(false);
                   setAdults(2);
                   setChildren(0);
                   setAges([]);
                   setRooms(1);
+                  setPage(1);
                 }}
               >
                 Explore stays
@@ -659,98 +922,393 @@ export function Marketplace({
             </div>
           ) : (
             <div className={map ? "map-results" : ""}>
-              <div className="stay-grid">
-                {results.map((s) => (
-                  <article className="stay-card" key={s.id}>
-                    <div className="stay-image">
-                      <Link href={stayLink(s)} tabIndex={-1} aria-hidden="true">
-                        <img
-                          src={s.image}
-                          alt={`${s.name} accommodation setting`}
-                          loading="lazy"
-                        />
-                      </Link>
-                      <span className="photo-label">
-                        {s.amenities.includes("Beachfront")
-                          ? "Lakeside escape"
-                          : s.type === "Lodge"
-                            ? "Into the wild"
-                            : "A lovely place to land"}
-                      </span>
+              <div>
+                <div className="stay-grid">
+                  {paginatedResults.map((s) => (
+                    <article
+                      className="stay-card"
+                      key={s.id}
+                      style={{
+                        outline: activeStay?.id === s.id ? "2px solid #0f766e" : undefined,
+                        boxShadow: activeStay?.id === s.id ? "0 4px 16px rgba(15,118,110,0.2)" : undefined,
+                      }}
+                      onMouseEnter={() => {
+                        if (map) setActiveStay(s);
+                      }}
+                    >
+                      <div className="stay-image">
+                        <Link href={stayLink(s)} tabIndex={-1} aria-hidden="true">
+                          <img
+                            src={s.image}
+                            alt={`${s.name} accommodation setting`}
+                            loading="lazy"
+                          />
+                        </Link>
+                        <span className="photo-label">
+                          {s.amenities.includes("Beachfront")
+                            ? "Lakeside escape"
+                            : s.type === "Lodge"
+                              ? "Into the wild"
+                              : "A lovely place to land"}
+                        </span>
+                        <button
+                          className={`save-button ${saved.includes(s.id) ? "is-saved" : ""}`}
+                          onClick={() => save(s.id)}
+                          aria-label={`${saved.includes(s.id) ? "Unsave" : "Save"} ${s.name}`}
+                          aria-pressed={saved.includes(s.id)}
+                        >
+                          <Heart
+                            size={19}
+                            fill={saved.includes(s.id) ? "currentColor" : "none"}
+                          />
+                        </button>
+                      </div>
+                      <div className="stay-topline">
+                        <span>
+                          {s.type} · {s.location}
+                        </span>
+                        <span className="rating">
+                          {s.reviews > 0 ? (
+                            <>
+                              <Star size={13} fill="currentColor" /> {s.rating.toFixed(1)}{" "}
+                              <small>({s.reviews})</small>
+                            </>
+                          ) : (
+                            <small>New listing</small>
+                          )}
+                        </span>
+                      </div>
+                      <h3>
+                        <Link href={stayLink(s)}>{s.name}</Link>
+                      </h3>
+                      <p className="stay-amenities">
+                        {s.amenities.slice(0, 3).join(" · ")}
+                      </p>
+                      <div className="response-line">
+                        <MessageCircle size={13} />
+                        {s.instant ? "Instant booking" : "Request a stay"}
+                        {origin && <span> · {distance(s).toFixed(1)} km</span>}
+                      </div>
+                      <div className="stay-bottom">
+                        <div>
+                          <strong>{money(s.price)}</strong>
+                          <span> / night</span>
+                          <small>
+                            {money(s.price * nights * rooms)} total · {nights} nights · room
+                            rate total
+                          </small>
+                        </div>
+                        <Link href={stayLink(s)} aria-label={`View ${s.name}`}>
+                          <ArrowUpRight size={21} />
+                        </Link>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+
+                {/* Production Pagination Controls */}
+                {totalResults > 0 && (
+                  <div
+                    className="marketplace-pagination"
+                    style={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 16,
+                      marginTop: 32,
+                      paddingTop: 24,
+                      borderTop: "1px solid var(--market-line, #e2e8f0)",
+                    }}
+                  >
+                    <div style={{ fontSize: 13, color: "var(--market-muted, #64748b)" }}>
+                      Showing <strong>{Math.min(startIndex + 1, totalResults)}</strong>–
+                      <strong>{Math.min(startIndex + pageSize, totalResults)}</strong> of{" "}
+                      <strong>{totalResults}</strong> stays
+                    </div>
+
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                       <button
-                        className={`save-button ${saved.includes(s.id) ? "is-saved" : ""}`}
-                        onClick={() => save(s.id)}
-                        aria-label={`${saved.includes(s.id) ? "Unsave" : "Save"} ${s.name}`}
-                        aria-pressed={saved.includes(s.id)}
+                        type="button"
+                        className="button secondary small"
+                        disabled={currentPage <= 1}
+                        onClick={() => handlePageChange(1)}
+                        aria-label="First page"
+                        title="First page"
+                        style={{ minWidth: 36, padding: "6px 8px" }}
                       >
-                        <Heart
-                          size={19}
-                          fill={saved.includes(s.id) ? "currentColor" : "none"}
-                        />
+                        «
+                      </button>
+                      <button
+                        type="button"
+                        className="button secondary small"
+                        disabled={currentPage <= 1}
+                        onClick={() => handlePageChange(currentPage - 1)}
+                        aria-label="Previous page"
+                        title="Previous page"
+                        style={{ minWidth: 36, padding: "6px 8px" }}
+                      >
+                        ‹
+                      </button>
+
+                      {getPageNumbers(currentPage, totalPages).map((p, idx) =>
+                        p === "..." ? (
+                          <span key={`ellipsis-${idx}`} style={{ padding: "0 6px", color: "#94a3b8" }}>
+                            …
+                          </span>
+                        ) : (
+                          <button
+                            key={`page-${p}`}
+                            type="button"
+                            className={`button small ${currentPage === p ? "" : "secondary"}`}
+                            onClick={() => handlePageChange(Number(p))}
+                            aria-current={currentPage === p ? "page" : undefined}
+                            style={{
+                              minWidth: 36,
+                              padding: "6px 10px",
+                              fontWeight: currentPage === p ? 700 : 500,
+                            }}
+                          >
+                            {p}
+                          </button>
+                        )
+                      )}
+
+                      <button
+                        type="button"
+                        className="button secondary small"
+                        disabled={currentPage >= totalPages}
+                        onClick={() => handlePageChange(currentPage + 1)}
+                        aria-label="Next page"
+                        title="Next page"
+                        style={{ minWidth: 36, padding: "6px 8px" }}
+                      >
+                        ›
+                      </button>
+                      <button
+                        type="button"
+                        className="button secondary small"
+                        disabled={currentPage >= totalPages}
+                        onClick={() => handlePageChange(totalPages)}
+                        aria-label="Last page"
+                        title="Last page"
+                        style={{ minWidth: 36, padding: "6px 8px" }}
+                      >
+                        »
                       </button>
                     </div>
-                    <div className="stay-topline">
-                      <span>
-                        {s.type} · {s.location}
-                      </span>
-                      <span className="rating">
-                        {s.reviews > 0 ? (
-                          <>
-                            <Star size={13} fill="currentColor" /> {s.rating.toFixed(1)}{" "}
-                            <small>({s.reviews})</small>
-                          </>
-                        ) : (
-                          <small>New listing</small>
-                        )}
-                      </span>
+
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
+                      <span style={{ color: "var(--market-muted, #64748b)" }}>Stays per page:</span>
+                      <select
+                        value={pageSize}
+                        onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                        aria-label="Stays per page"
+                        style={{
+                          padding: "4px 8px",
+                          borderRadius: 6,
+                          border: "1px solid var(--market-line, #cbd5e1)",
+                          fontSize: 13,
+                        }}
+                      >
+                        <option value={6}>6 per page</option>
+                        <option value={12}>12 per page</option>
+                        <option value={24}>24 per page</option>
+                        <option value={48}>48 per page</option>
+                      </select>
                     </div>
-                    <h3>
-                      <Link href={stayLink(s)}>{s.name}</Link>
-                    </h3>
-                    <p className="stay-amenities">
-                      {s.amenities.slice(0, 3).join(" · ")}
-                    </p>
-                    <div className="response-line">
-                      <MessageCircle size={13} />
-                      {s.instant ? "Instant booking" : "Request a stay"}
-                      {origin && <span> · {distance(s).toFixed(1)} km</span>}
-                    </div>
-                    <div className="stay-bottom">
-                      <div>
-                        <strong>{money(s.price)}</strong>
-                        <span> / night</span>
-                        <small>
-                          {money(s.price * nights * rooms)} total · {nights} nights · room
-                          rate total
-                        </small>
-                      </div>
-                      <Link href={stayLink(s)} aria-label={`View ${s.name}`}>
-                        <ArrowUpRight size={21} />
-                      </Link>
-                    </div>
-                  </article>
-                ))}
+                  </div>
+                )}
               </div>
+
               {map && (
-                <aside className="map-panel">
-                  <div className="map-lake">MALAWI</div>
-                  <strong className="map-label">Malawi · location overview</strong>
-                  {results.map((s, i) => (
-                    <Link
-                      key={s.id}
-                      className="map-pin"
-                      style={{
-                        left: `${18 + (i % 3) * 25}%`,
-                        top: `${22 + Math.floor(i / 3) * 37 + (i % 2) * 12}%`,
-                      }}
-                      href={stayLink(s)}
-                    >
-                      <MapPin size={13} />
-                      {money(s.price)}
-                      <small>{s.location}</small>
-                    </Link>
-                  ))}
-                  <p>Approximate overview. Open a stay for its map link.</p>
+                <aside
+                  className="map-panel"
+                  style={{
+                    position: "sticky",
+                    top: 20,
+                    borderRadius: 12,
+                    border: "1px solid var(--market-line, #cbd5e1)",
+                    overflow: "hidden",
+                    display: "flex",
+                    flexDirection: "column",
+                    background: "#f8fafc",
+                    minHeight: 580,
+                  }}
+                >
+                  {/* Map Header & Jump Chips */}
+                  <div
+                    style={{
+                      padding: "10px 14px",
+                      background: "#ffffff",
+                      borderBottom: "1px solid #e2e8f0",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 8,
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <strong style={{ fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>
+                        <MapPin size={15} color="#0f766e" />
+                        Map Search ({results.length} stay{results.length === 1 ? "" : "s"})
+                      </strong>
+                      <span style={{ fontSize: 11, color: "#64748b" }}>Live interactive view</span>
+                    </div>
+
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
+                      <span style={{ fontSize: 11, color: "#64748b" }}>Jump to:</span>
+                      {[
+                        { label: "All Areas", query: "" },
+                        { label: "Lake Malawi", query: "Mangochi" },
+                        { label: "Lilongwe", query: "Lilongwe" },
+                        { label: "Windermere", query: "Windermere" },
+                        { label: "Blantyre", query: "Blantyre" },
+                      ].map((chip) => (
+                        <button
+                          key={chip.label}
+                          type="button"
+                          className={`button small ${location.toLowerCase() === chip.query.toLowerCase() ? "" : "secondary"}`}
+                          style={{ padding: "2px 8px", fontSize: 11, borderRadius: 12 }}
+                          onClick={() => {
+                            setLocation(chip.query);
+                            setPage(1);
+                          }}
+                        >
+                          {chip.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Interactive Map Embed */}
+                  <div style={{ flex: 1, minHeight: 380, position: "relative" }}>
+                    <iframe
+                      title="Marketplace interactive accommodation map"
+                      src={`https://www.openstreetmap.org/export/embed.html?bbox=${mapBbox}&layer=mapnik`}
+                      style={{ width: "100%", height: "100%", border: "none", display: "block" }}
+                      loading="lazy"
+                    />
+
+                    {/* Stay Preview Popover (when a stay is selected/clicked) */}
+                    {activeStay && (
+                      <div
+                        style={{
+                          position: "absolute",
+                          bottom: 14,
+                          left: 14,
+                          right: 14,
+                          background: "#ffffff",
+                          borderRadius: 10,
+                          boxShadow: "0 10px 30px rgba(0,0,0,0.2)",
+                          padding: 10,
+                          display: "flex",
+                          gap: 12,
+                          alignItems: "center",
+                          zIndex: 20,
+                          border: "1px solid #e2e8f0",
+                        }}
+                      >
+                        <img
+                          src={activeStay.image}
+                          alt={activeStay.name}
+                          style={{
+                            width: 80,
+                            height: 64,
+                            borderRadius: 6,
+                            objectFit: "cover",
+                            flexShrink: 0,
+                          }}
+                        />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start" }}>
+                            <h4
+                              style={{
+                                margin: 0,
+                                fontSize: 13,
+                                fontWeight: 700,
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {activeStay.name}
+                            </h4>
+                            <button
+                              type="button"
+                              onClick={() => setActiveStay(null)}
+                              style={{
+                                background: "none",
+                                border: "none",
+                                cursor: "pointer",
+                                padding: 2,
+                                color: "#94a3b8",
+                              }}
+                              aria-label="Close preview"
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
+                          <div style={{ fontSize: 11, color: "#64748b", margin: "2px 0 4px" }}>
+                            {activeStay.location} · {activeStay.type}
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <strong style={{ fontSize: 13, color: "#0f766e" }}>
+                              {money(activeStay.price)} <span style={{ fontSize: 10, fontWeight: 400, color: "#64748b" }}>/ night</span>
+                            </strong>
+                            <Link
+                              href={stayLink(activeStay)}
+                              className="button small"
+                              style={{ padding: "2px 8px", fontSize: 11 }}
+                            >
+                              View stay
+                            </Link>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Interactive Stay Pins Drawer */}
+                  <div
+                    style={{
+                      padding: "10px 14px",
+                      background: "#ffffff",
+                      borderTop: "1px solid #e2e8f0",
+                      maxHeight: 160,
+                      overflowY: "auto",
+                    }}
+                  >
+                    <div style={{ fontSize: 11, fontWeight: 600, color: "#64748b", marginBottom: 6 }}>
+                      CLICK PIN TO PREVIEW STAY:
+                    </div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                      {results.map((s) => (
+                        <button
+                          key={s.id}
+                          type="button"
+                          onClick={() => setActiveStay(s)}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 4,
+                            padding: "4px 8px",
+                            borderRadius: 16,
+                            fontSize: 11,
+                            fontWeight: 600,
+                            cursor: "pointer",
+                            background: activeStay?.id === s.id ? "#0f766e" : "#f1f5f9",
+                            color: activeStay?.id === s.id ? "#ffffff" : "#1e293b",
+                            border: "1px solid",
+                            borderColor: activeStay?.id === s.id ? "#0f766e" : "#cbd5e1",
+                            transition: "all 0.15s ease",
+                          }}
+                        >
+                          <MapPin size={11} />
+                          {money(s.price)} · {s.name.split(" ")[0]}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </aside>
               )}
             </div>
@@ -813,4 +1371,17 @@ export function Marketplace({
 }
 function ArrowDownIcon() {
   return <ChevronRight size={16} style={{ transform: "rotate(90deg)" }} />;
+}
+
+function getPageNumbers(current: number, total: number): (number | "...")[] {
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+  if (current <= 4) {
+    return [1, 2, 3, 4, 5, "...", total];
+  }
+  if (current >= total - 3) {
+    return [1, "...", total - 4, total - 3, total - 2, total - 1, total];
+  }
+  return [1, "...", current - 1, current, current + 1, "...", total];
 }

@@ -1,7 +1,7 @@
 import { clerkMiddleware } from "@clerk/nextjs/server";
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
-export default clerkMiddleware((_auth, request) => {
+function portalRouting(request: NextRequest) {
   const portal = process.env.APP_PORTAL || "guest";
   const path = request.nextUrl.pathname;
   const backendProxy = path.startsWith("/api/backend/");
@@ -24,7 +24,12 @@ export default clerkMiddleware((_auth, request) => {
   if (
     !backendProxy &&
     !allowed.includes(path) &&
-    !(portal === "guest" && path.startsWith("/stays/"))
+    !(
+      portal === "guest" &&
+      (path.startsWith("/stays/") ||
+        path.startsWith("/bookings/") ||
+        path.startsWith("/booking/"))
+    )
   )
     return new NextResponse("This page is not available in this portal.", {
       status: 404,
@@ -35,7 +40,14 @@ export default clerkMiddleware((_auth, request) => {
     return NextResponse.rewrite(url);
   }
   return NextResponse.next();
-});
+}
+
+export default function middleware(request: NextRequest, event: any) {
+  if (process.env.CLERK_SECRET_KEY && process.env.CLERK_SECRET_KEY.startsWith("sk_")) {
+    return clerkMiddleware((_auth, req) => portalRouting(req as unknown as NextRequest))(request, event);
+  }
+  return portalRouting(request);
+}
 
 export const config = {
   matcher: [

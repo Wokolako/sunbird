@@ -2,6 +2,7 @@ import { NotificationChannel, Prisma } from "@prisma/client";
 import prisma from "../prisma";
 import { sendEmail } from "../email/resend";
 import { getSmsProvider } from "../sms";
+import { baseLayout } from "./templates";
 
 export async function queueNotification(input: {
   userId: string;
@@ -69,12 +70,17 @@ export async function deliverQueuedNotifications(limit = 50) {
   const results = [];
   for (const delivery of deliveries) {
     try {
+      const customHtml = (delivery.notification.data as Record<string, unknown> | null)?.html as string | undefined;
+      const htmlBody = customHtml || baseLayout(
+        delivery.notification.title,
+        `<h2 style="color: #0f172a; margin-top:0;">${escapeHtml(delivery.notification.title)}</h2><p style="color: #334155; line-height: 1.6;">${escapeHtml(delivery.notification.body)}</p>`
+      );
       const providerResult =
         delivery.channel === "EMAIL"
           ? await sendEmail({
               to: delivery.destination,
               subject: delivery.notification.title,
-              html: `<p>${escapeHtml(delivery.notification.body)}</p>`,
+              html: htmlBody,
               text: delivery.notification.body,
             })
           : await getSmsProvider().sendNotification(

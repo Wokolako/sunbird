@@ -16,6 +16,7 @@ import {
   DateBlockReason,
   PayoutSchedule,
   PayoutStatus,
+  StoragePurpose,
 } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
@@ -44,13 +45,19 @@ async function main() {
   await prisma.reservation.deleteMany();
   await prisma.dateBlock.deleteMany();
   await prisma.rateRule.deleteMany();
+  await prisma.operationalTask.deleteMany();
+  await prisma.ratePlan.deleteMany();
   await prisma.roomUnit.deleteMany();
   await prisma.roomCategory.deleteMany();
   await prisma.propertyPhoto.deleteMany();
   await prisma.propertyAmenity.deleteMany();
   await prisma.amenity.deleteMany();
   await prisma.propertyStaff.deleteMany();
+  await prisma.verificationDocument.deleteMany();
+  await prisma.storedObject.deleteMany();
   await prisma.property.deleteMany();
+  await prisma.organisationMembership.deleteMany();
+  await prisma.organisation.deleteMany();
   await prisma.guestProfile.deleteMany();
   await prisma.session.deleteMany();
   await prisma.account.deleteMany();
@@ -190,10 +197,55 @@ async function main() {
     },
   });
 
+  // 6. Create Organisation & Flagship Properties
+  console.log("🏢 Seeding organisation and verification...");
+  const organisation = await prisma.organisation.create({
+    data: {
+      name: "Windermere Hospitality Group",
+      type: "hotel_chain",
+      registrationNumber: "ORG-GB-2023-88941",
+      phone: "+44 15394 42200",
+      email: "management@lakehaven.com",
+      address: "Lakeside Drive, Bowness-on-Windermere, Cumbria, LA23 3HH",
+      status: "APPROVED",
+      verificationReason: "Verified corporate hospitality provider",
+      memberships: {
+        create: [
+          { userId: ownerUser.id, role: StaffRole.OWNER },
+          { userId: managerUser.id, role: StaffRole.MANAGER },
+        ],
+      },
+    },
+  });
+
+  const sampleDoc = await prisma.storedObject.create({
+    data: {
+      key: "docs/org-verification-windermere.pdf",
+      bucket: "sunbird-private-docs",
+      purpose: StoragePurpose.VERIFICATION_DOCUMENT,
+      contentType: "application/pdf",
+      sizeBytes: BigInt(245760),
+      isPrivate: true,
+      uploadedById: ownerUser.id,
+    },
+  });
+
+  await prisma.verificationDocument.create({
+    data: {
+      organisationId: organisation.id,
+      objectId: sampleDoc.id,
+      kind: "business_registration",
+      filename: "Companies_House_Certificate_88941.pdf",
+      status: "APPROVED",
+      reviewedAt: new Date(),
+    },
+  });
+
   // 6. Create Flagship Properties
   console.log("🏨 Seeding properties (Lodge & Hotel)...");
   const lodgeProperty = await prisma.property.create({
     data: {
+      organisationId: organisation.id,
       name: "Windermere Lakeside Retreat & Lodge",
       legalName: "Windermere Hospitality Ltd",
       slug: "windermere-lakeside-retreat-lodge",
@@ -266,6 +318,7 @@ async function main() {
 
   const hotelProperty = await prisma.property.create({
     data: {
+      organisationId: organisation.id,
       name: "Mayfair Boutique Hotel",
       legalName: "Mayfair Hotels Ltd",
       slug: "mayfair-boutique-hotel",
@@ -392,6 +445,30 @@ async function main() {
       floor: "Ground",
       status: RoomUnitStatus.MAINTENANCE,
       notes: "Air conditioner condenser filter replacement scheduled.",
+    },
+  });
+
+  console.log("📋 Seeding rate plans and operational tasks...");
+  const standardRatePlan = await prisma.ratePlan.create({
+    data: {
+      propertyId: lodgeProperty.id,
+      name: "Standard Flexible Rate",
+      minimumStay: 1,
+      taxBps: 1000,
+      serviceFee: 15.00,
+      active: true,
+    },
+  });
+
+  await prisma.operationalTask.create({
+    data: {
+      propertyId: lodgeProperty.id,
+      roomUnitId: room101.id,
+      type: "CLEANING",
+      status: "OPEN",
+      note: "Standard turnover cleaning before 14:00 check-in",
+      assignedToId: housekeeperUser.id,
+      dueAt: new Date(Date.now() + 24 * 3600 * 1000),
     },
   });
 

@@ -18,8 +18,13 @@ async function proxy(
     target.searchParams.append(key, value)
   );
 
-  const { getToken } = await auth();
-  const token = await getToken();
+  let token: string | null = null;
+  try {
+    const { getToken } = await auth();
+    token = await getToken();
+  } catch {
+    // Clerk auth unavailable (missing CLERK_SECRET_KEY) — continue without token
+  }
   const headers = new Headers();
   const contentType = request.headers.get("content-type");
   const accept = request.headers.get("accept");

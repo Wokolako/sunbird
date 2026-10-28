@@ -125,11 +125,13 @@ export function PropertyDetail({ id }: { id: string }) {
           </div>
           <a
             className="text-link"
-            target="_blank"
-            rel="noreferrer"
-            href={`https://www.openstreetmap.org/?mlat=${stay.lat}&mlon=${stay.lng}#map=12/${stay.lat}/${stay.lng}`}
+            href="#location-map"
+            onClick={(e) => {
+              e.preventDefault();
+              document.getElementById("location-map")?.scrollIntoView({ behavior: "smooth" });
+            }}
           >
-            View location <MapPin size={16} />
+            View map & location <MapPin size={16} />
           </a>
         </div>
         <div className="property-gallery">
@@ -284,6 +286,64 @@ export function PropertyDetail({ id }: { id: string }) {
                   )}
                 </form>
               )}
+            </section>
+            <section className="detail-section" id="location-map">
+              <h2>Where you will be</h2>
+              <p style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 12 }}>
+                <MapPin size={16} />
+                <strong>{stay.location}</strong> · Accurate location provided upon booking confirmation
+              </p>
+              <div
+                style={{
+                  border: "1px solid var(--line, #e2e8f0)",
+                  borderRadius: 12,
+                  overflow: "hidden",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+                }}
+              >
+                <div style={{ height: 340, width: "100%", position: "relative" }}>
+                  <iframe
+                    title={`${stay.name} Location Map`}
+                    src={`https://www.openstreetmap.org/export/embed.html?bbox=${stay.lng - 0.018}%2C${stay.lat - 0.012}%2C${stay.lng + 0.018}%2C${stay.lat + 0.012}&layer=mapnik&marker=${stay.lat}%2C${stay.lng}`}
+                    style={{ width: "100%", height: "100%", border: "none" }}
+                    loading="lazy"
+                  />
+                </div>
+                <div
+                  style={{
+                    padding: "12px 16px",
+                    background: "#f8fafc",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                    gap: 10,
+                    fontSize: 13,
+                  }}
+                >
+                  <span>
+                    📍 <strong>Coordinates:</strong> {Number(stay.lat).toFixed(4)}, {Number(stay.lng).toFixed(4)}
+                  </span>
+                  <div style={{ display: "flex", gap: 12 }}>
+                    <a
+                      className="text-link"
+                      target="_blank"
+                      rel="noreferrer"
+                      href={`https://www.openstreetmap.org/?mlat=${stay.lat}&mlon=${stay.lng}#map=15/${stay.lat}/${stay.lng}`}
+                    >
+                      Open in OpenStreetMap ↗
+                    </a>
+                    <a
+                      className="text-link"
+                      target="_blank"
+                      rel="noreferrer"
+                      href={`https://www.google.com/maps/search/?api=1&query=${stay.lat},${stay.lng}`}
+                    >
+                      Google Maps ↗
+                    </a>
+                  </div>
+                </div>
+              </div>
             </section>
           </div>
           <aside className="booking-panel">

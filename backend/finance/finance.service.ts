@@ -94,22 +94,100 @@ export async function updateCommission(user: AuthUser, input: { propertyId: stri
   return { id: setting.id };
 }
 
-export async function generatePayouts(user: AuthUser) {
-  if (user.role !== "admin") return null;
+export async function generatePayouts(user: AuthUser, propertyIdFilter?: string) {
+  if (user.role !== "admin" && user.role !== "owner") return null;
+  return executePayoutGeneration(user, propertyIdFilter);
+}
+
+export async function generateScheduledPayouts() {
+  const systemActor = { id: "system", email: "scheduler@vabbot.internal", role: "admin" as const };
+  return executePayoutGeneration(systemActor, undefined, true);
+}
+
+async function executePayoutGeneration(
+  actor: { id: string; email: string },
+  propertyIdFilter?: string,
+  enforceSchedule = false
+) {
   const policy = commercialPolicy();
-  const properties = await prisma.property.findMany({ include: { commissionSetting: true, organisation: true } });
+  const properties = await prisma.property.findMany({
+    where: propertyIdFilter ? { id: propertyIdFilter } : undefined,
+    include: { commissionSetting: true, organisation: true },
+  });
   const created: string[] = [];
+
   for (const property of properties) {
+    const schedule = property.commissionSetting?.payoutSchedule ?? "WEEKLY";
     const reserveDays = property.commissionSetting?.reserveDays ?? policy.reserveDays;
     const cutoff = new Date(Date.now() - reserveDays * 86_400_000);
-    const payments = await prisma.payment.findMany({ where: { status: { in: ["COMPLETED", "PARTIALLY_REFUNDED"] }, paidAt: { lte: cutoff }, reservation: { propertyId: property.id, status: "CHECKED_OUT" }, payoutItems: { none: {} } }, include: { refunds: true } });
+
+    // If enforceSchedule is true, verify schedule threshold
+    if (enforceSchedule) {
+      const lastPayout = await prisma.payout.findFirst({
+        where: { propertyId: property.id },
+        orderBy: { createdAt: "desc" },
+      });
+      if (lastPayout) {
+        const daysSinceLast = (Date.now() - lastPayout.createdAt.getTime()) / 86_400_000;
+        const requiredDays = schedule === "MONTHLY" ? 28 : schedule === "BI_WEEKLY" ? 14 : 7;
+        if (daysSinceLast < requiredDays) {
+          continue; // Not yet due for this property's schedule
+        }
+      }
+    }
+
+    const payments = await prisma.payment.findMany({
+      where: {
+        status: { in: ["COMPLETED", "PARTIALLY_REFUNDED"] },
+        paidAt: { lte: cutoff },
+        reservation: { propertyId: property.id, status: "CHECKED_OUT" },
+        payoutItems: { none: {} },
+      },
+      include: { refunds: true },
+    });
     if (!payments.length) continue;
+
     const percentage = Number(property.commissionSetting?.percentage ?? policy.commissionBps / 100);
-    const itemData = payments.map((payment) => { const refunded = payment.refunds.filter((item) => item.status === "SUCCEEDED").reduce((sum, item) => sum + moneyMinor(item.amount), 0); const gross = Math.max(0, moneyMinor(payment.amount) - refunded); const commission = Math.round(gross * percentage / 100); return { paymentId: payment.id, gross, commission, net: gross - commission }; }).filter((item) => item.net > 0);
+    const itemData = payments
+      .map((payment) => {
+        const refunded = payment.refunds
+          .filter((item) => item.status === "SUCCEEDED")
+          .reduce((sum, item) => sum + moneyMinor(item.amount), 0);
+        const gross = Math.max(0, moneyMinor(payment.amount) - refunded);
+        const commission = Math.round((gross * percentage) / 100);
+        return { paymentId: payment.id, gross, commission, net: gross - commission };
+      })
+      .filter((item) => item.net > 0);
+
     if (!itemData.length) continue;
-    const payout = await prisma.payout.create({ data: { propertyId: property.id, payoutReference: reference("PO"), periodStart: new Date(Math.min(...payments.map((item) => item.paidAt?.getTime() || Date.now()))), periodEnd: cutoff, grossRevenue: major(itemData.reduce((sum, item) => sum + item.gross, 0)), commissionRate: percentage, commissionFee: major(itemData.reduce((sum, item) => sum + item.commission, 0)), netPayout: major(itemData.reduce((sum, item) => sum + item.net, 0)), items: { create: itemData.map((item) => ({ paymentId: item.paymentId, gross: major(item.gross), commission: major(item.commission), net: major(item.net) })) } } });
+
+    const payout = await prisma.payout.create({
+      data: {
+        propertyId: property.id,
+        payoutReference: reference("PO"),
+        periodStart: new Date(Math.min(...payments.map((item) => item.paidAt?.getTime() || Date.now()))),
+        periodEnd: cutoff,
+        grossRevenue: major(itemData.reduce((sum, item) => sum + item.gross, 0)),
+        commissionRate: percentage,
+        commissionFee: major(itemData.reduce((sum, item) => sum + item.commission, 0)),
+        netPayout: major(itemData.reduce((sum, item) => sum + item.net, 0)),
+        items: {
+          create: itemData.map((item) => ({
+            paymentId: item.paymentId,
+            gross: major(item.gross),
+            commission: major(item.commission),
+            net: major(item.net),
+          })),
+        },
+      },
+    });
     created.push(payout.id);
-    await audit(user, "payout", payout.id, "generate", { propertyId: property.id, items: itemData.length });
+    await audit(actor, "payout", payout.id, "generate", {
+      propertyId: property.id,
+      schedule,
+      reserveDays,
+      items: itemData.length,
+    });
   }
   return { created: created.length, ids: created };
 }
